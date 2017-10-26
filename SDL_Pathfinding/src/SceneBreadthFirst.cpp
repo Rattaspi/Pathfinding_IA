@@ -119,9 +119,16 @@ void SceneBreadthFirst::update(float dtime, SDL_Event *event)
 
 void SceneBreadthFirst::draw()
 {
+	SDL_SetRenderDrawColor(TheApp::Instance()->getRenderer(), 0, 255, 0, 127);
+
+	for (unsigned int i = 0; i < graph.connections.size(); ++i) {
+		SDL_RenderDrawLine(TheApp::Instance()->getRenderer(),cell2pix(graph.connections[i].GetFromNode()->GetCoords()).x, cell2pix(graph.connections[i].GetFromNode()->GetCoords()).y, cell2pix(graph.connections[i].GetToNode()->GetCoords()).x, cell2pix(graph.connections[i].GetToNode()->GetCoords()).y);
+	}
+	SDL_SetRenderDrawColor(TheApp::Instance()->getRenderer(), 255, 255, 255, 127);
+
+
 	drawMaze();
 	drawCoin();
-
 
 	if (draw_grid)
 	{
@@ -166,6 +173,11 @@ void SceneBreadthFirst::drawMaze()
 	{
 		SDL_RenderCopy(TheApp::Instance()->getRenderer(), background_texture, NULL, NULL);
 	}
+
+
+
+
+
 }
 
 void SceneBreadthFirst::drawCoin()
@@ -275,31 +287,64 @@ void SceneBreadthFirst::initMaze()
 
 		}
 	}
-	for (int i = 0; i < num_cell_x; i++)
+
+	for (int j = 0; j < num_cell_y; j++)
 	{
-		for (int j = 0; j < num_cell_y; j++)
+		for (int i = 0; i < num_cell_x; i++)
 		{
+		
 			Node tmp;
-			tmp.SetObstacle(terrain[i][j]);
+			tmp.SetObstacle(!terrain[i][j]);
 			tmp.SetCoords(Vector2D{ (float)i,(float)j });
 			nodos.push_back(tmp);
 		}
 	}
 
-	for (int i = 0; i < (nodos.size()); i++) {
+	for (int i = num_cell_x; i < (nodos.size() - num_cell_x); i++) {
 		if (!nodos[i].IsObstacle()) {
-			if (!nodos[i - 1].IsObstacle) {
-				graph.connections.push_back(Connection(nodos[i],nodos[i-1]));
-			}if (!nodos[i + 1].IsObstacle) {
-				graph.connections.push_back(Connection(nodos[i], nodos[i + 1]));
-			}if (!nodos[i - num_cell_x].IsObstacle) {
-				graph.connections.push_back(Connection(nodos[i], nodos[i - num_cell_x]));
-			}if (!nodos[i + num_cell_x].IsObstacle) {
-				graph.connections.push_back(Connection(nodos[i], nodos[i + num_cell_x]));
+			if (i != num_cell_x * 10 && i != num_cell_x * 11 && i != num_cell_x * 12 && i != num_cell_x * 10 + num_cell_x - 1 && i != num_cell_x * 11 + num_cell_x - 1 && i != num_cell_x * 12 + num_cell_x - 1) {
+				if (!nodos[i - 1].IsObstacle()) {
+					graph.connections.push_back(Connection(nodos[i], nodos[i - 1]));
+					//std::cout << Connection(nodos[i], nodos[i - 1]).GetFromNode()->GetCoords().x<<std::endl;
+				}if (!nodos[i + 1].IsObstacle()) {
+					graph.connections.push_back(Connection(nodos[i], nodos[i + 1]));
+				}if (!nodos[i - num_cell_x].IsObstacle()) {
+					graph.connections.push_back(Connection(nodos[i], nodos[i - num_cell_x]));
+				}if (!nodos[i + num_cell_x].IsObstacle()) {
+					graph.connections.push_back(Connection(nodos[i], nodos[i + num_cell_x]));
+				}
 			}
 		}
 	}
-	
+	//LAS DE LA IZQUIERDA------------------------------------------------------------------------------------------
+
+	graph.connections.push_back(Connection(nodos[num_cell_x*10], nodos[num_cell_x*11]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 10], nodos[num_cell_x * 10+1]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 10], nodos[num_cell_x * 10+num_cell_x-1]));
+
+	graph.connections.push_back(Connection(nodos[num_cell_x * 11], nodos[num_cell_x * 12]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 11], nodos[num_cell_x * 11 + 1]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 11], nodos[num_cell_x * 11 + num_cell_x - 1]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 11], nodos[num_cell_x * 10]));
+
+	graph.connections.push_back(Connection(nodos[num_cell_x * 12], nodos[num_cell_x * 11]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 12], nodos[num_cell_x * 12 + 1]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 12], nodos[num_cell_x * 12 + num_cell_x - 1]));
+
+	//LAS DE LA DERECHA------------------------------------------------------------------------------------------
+
+	graph.connections.push_back(Connection(nodos[num_cell_x * 10 + num_cell_x - 1], nodos[num_cell_x * 11 + num_cell_x - 1]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 10 + num_cell_x - 1], nodos[num_cell_x * 10 + num_cell_x - 2]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 10 + num_cell_x - 1], nodos[num_cell_x * 10]));
+
+	graph.connections.push_back(Connection(nodos[num_cell_x * 11 + num_cell_x - 1], nodos[num_cell_x * 12 + num_cell_x - 1]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 11 + num_cell_x - 1], nodos[num_cell_x * 11 + num_cell_x - 2]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 11 + num_cell_x - 1], nodos[num_cell_x * 11]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 11 + num_cell_x - 1], nodos[num_cell_x * 10 + num_cell_x - 1]));
+
+	graph.connections.push_back(Connection(nodos[num_cell_x * 12 + num_cell_x - 1], nodos[num_cell_x * 12 + num_cell_x - 2]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 12 + num_cell_x - 1], nodos[num_cell_x * 12]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 12 + num_cell_x - 1], nodos[num_cell_x * 11 + num_cell_x - 1]));
 
 
 }
