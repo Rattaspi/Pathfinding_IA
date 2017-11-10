@@ -1,9 +1,28 @@
+#define NullVector Vector2D{-1-1}
 #include "SceneBreadthFirst.h"
 
 using namespace std;
 
+//Sobrecarga del operador <
+static inline bool operator < (const Vector2D& lhs, const Vector2D& rhs) {
+	bool temp = false;
+	if (lhs.y > rhs.y) {
+		temp = true;
+	}
+
+	else if (lhs.y == rhs.y) {
+		if (lhs.x > rhs.x) {
+			temp = true;
+		}
+	}
+
+	return temp;
+}
+
 SceneBreadthFirst::SceneBreadthFirst()
 {
+	waitAFrame = false;
+	foundPath = false;
 	draw_grid = false;
 
 	num_cell_x = SRC_WIDTH / CELL_SIZE;
@@ -33,6 +52,8 @@ SceneBreadthFirst::SceneBreadthFirst()
 	currentTarget = Vector2D(0, 0);
 	currentTargetIndex = -1;
 
+
+
 }
 
 SceneBreadthFirst::~SceneBreadthFirst()
@@ -50,6 +71,7 @@ SceneBreadthFirst::~SceneBreadthFirst()
 
 void SceneBreadthFirst::update(float dtime, SDL_Event *event)
 {
+
 	/* Keyboard & Mouse events */
 	switch (event->type) {
 	case SDL_KEYDOWN:
@@ -67,8 +89,12 @@ void SceneBreadthFirst::update(float dtime, SDL_Event *event)
 					if (path.points[path.points.size() - 1] == cell2pix(cell))
 						break;
 
-				path.points.push_back(cell2pix(cell));
+				//path.points.push_back(cell2pix(cell));
+
 			}
+			BreadthFirst();
+
+
 		}
 		break;
 	default:
@@ -100,7 +126,9 @@ void SceneBreadthFirst::update(float dtime, SDL_Event *event)
 				else
 				{
 					Vector2D steering_force = agents[0]->Behavior()->Arrive(agents[0], currentTarget, path.ARRIVAL_DISTANCE, dtime);
-					agents[0]->update(steering_force, dtime, event);
+					if (foundPath) {
+						agents[0]->update(steering_force, dtime, event);
+					}
 				}
 				return;
 			}
@@ -109,13 +137,63 @@ void SceneBreadthFirst::update(float dtime, SDL_Event *event)
 
 		currentTarget = path.points[currentTargetIndex];
 		Vector2D steering_force = agents[0]->Behavior()->Seek(agents[0], currentTarget, dtime);
-		agents[0]->update(steering_force, dtime, event);
+		if (foundPath) {
+
+			agents[0]->update(steering_force, dtime, event);
+		}
 	}
 	else
 	{
+		if (foundPath) {
 		agents[0]->update(Vector2D(0, 0), dtime, event);
+		}
 	}
+
+
+
 }
+
+void SceneBreadthFirst::BreadthFirst() {
+	frontier.push(pix2cell(agents[0]->getPosition()));
+	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
+	Vector2D current;
+	Vector2D next;
+	std::vector<Connection>neighbours;
+
+	foundPath = false;
+
+	while (!frontier.empty()) {
+		current = frontier.front();
+		if (current == pix2cell(coinPosition)) {
+			break;
+		}
+		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
+		for (int i = 0; i < neighbours.size(); i++) {
+
+			if (Graph::EqualVector(cameFrom[neighbours[i].GetToNode()->GetCoords()], NullVector)) {
+
+				frontier.push(neighbours[i].GetToNode()->GetCoords());
+				cameFrom[neighbours[i].GetToNode()->GetCoords()] = current;
+			}
+		}
+		frontier.pop();
+	}
+
+	current = coinPosition;
+
+	path.points.push_back(cell2pix(current));
+
+	while (current != pix2cell(agents[0]->getPosition())) {
+		current = cameFrom[current];
+		//path.points.push_back(cell2pix(current));
+		path.points.insert(path.points.begin(), cell2pix(current));
+	}
+	//path = std::reverse(path.points.begin()), path.points.end());
+
+	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
+	foundPath = true;
+	ResetVisited();
+ }
 
 void SceneBreadthFirst::draw()
 {
@@ -297,6 +375,7 @@ void SceneBreadthFirst::initMaze()
 			tmp.SetObstacle(!terrain[i][j]);
 			tmp.SetCoords(Vector2D{ (float)i,(float)j });
 			nodos.push_back(tmp);
+			cameFrom[Vector2D{ (float)i,(float)j }] = NullVector;
 		}
 	}
 
@@ -318,7 +397,7 @@ void SceneBreadthFirst::initMaze()
 	}
 	//LAS DE LA IZQUIERDA------------------------------------------------------------------------------------------
 
-	graph.connections.push_back(Connection(nodos[num_cell_x*10], nodos[num_cell_x*11]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 10], nodos[num_cell_x * 11]));
 	graph.connections.push_back(Connection(nodos[num_cell_x * 10], nodos[num_cell_x * 10+1]));
 	graph.connections.push_back(Connection(nodos[num_cell_x * 10], nodos[num_cell_x * 10+num_cell_x-1]));
 
@@ -347,6 +426,16 @@ void SceneBreadthFirst::initMaze()
 	graph.connections.push_back(Connection(nodos[num_cell_x * 12 + num_cell_x - 1], nodos[num_cell_x * 11 + num_cell_x - 1]));
 
 
+}
+
+void SceneBreadthFirst::ResetVisited() {
+	for (int j = 0; j < num_cell_y; j++)
+	{
+		for (int i = 0; i < num_cell_x; i++)
+		{
+			cameFrom[Vector2D{ (float)i,(float)j }] = NullVector;
+		}
+	}
 }
 
 bool SceneBreadthFirst::loadTextures(char* filename_bg, char* filename_coin)
