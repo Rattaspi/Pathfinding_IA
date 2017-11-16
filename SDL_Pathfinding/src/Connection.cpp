@@ -16,6 +16,6 @@ float Connection::GetCost() {
 Connection::Connection(Node a, Node b) {
 	from = a;
 	to = b;
-	cost = a.GetCost();
+	cost = 1;
 }
 

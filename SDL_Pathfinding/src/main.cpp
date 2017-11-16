@@ -4,6 +4,7 @@
 #include "SceneBreadthFirst.h"
 #include "SDL_SimpleApp.h"
 #include "ScenePathFinding.h"
+#include "SceneDijkstra.h"
 
 #define FRAMES_PER_SEC 30
 
@@ -24,10 +25,10 @@ int main(int argc, char ** argv)
 	while (!quit)
 	{
 		this_tick = SDL_GetTicks();
-		if (this_tick < next_tick)
-		{
-			SDL_Delay(next_tick - this_tick);
-		}
+		//if (this_tick < next_tick)
+		//{
+		//	SDL_Delay(next_tick - this_tick);
+		//}
 		next_tick = this_tick + (1000 / FRAMES_PER_SEC);
 
 		// run app frame by frame
@@ -51,6 +52,9 @@ int main(int argc, char ** argv)
 			}
 			if (event.key.keysym.scancode == SDL_SCANCODE_3)
 			{
+				delete(curr_scene);
+				curr_scene = new SceneDijkstra;
+				app->setWindowTitle(curr_scene->getTitle());
 			}
 			if ((event.key.keysym.scancode == SDL_SCANCODE_Q) || (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE))
 			{
