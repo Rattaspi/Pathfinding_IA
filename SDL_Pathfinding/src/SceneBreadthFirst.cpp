@@ -191,6 +191,8 @@ void SceneBreadthFirst::BreadthFirst() {
 
 	path.points.push_back(cell2pix(current));
 
+
+
 	while (current != pix2cell(agents[0]->getPosition())) {
 		current = cameFrom[current];
 		//path.points.push_back(cell2pix(current));
@@ -199,6 +201,8 @@ void SceneBreadthFirst::BreadthFirst() {
 	//path = std::reverse(path.points.begin()), path.points.end());
 
 	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
+
+
 	foundPath = true;
 	ResetVisited();
  }

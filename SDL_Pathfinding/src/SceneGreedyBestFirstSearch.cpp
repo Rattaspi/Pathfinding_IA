@@ -1,5 +1,6 @@
+#include "SceneGreedyBestFirstSearch.h";
 #define NullVector Vector2D{-1-1}
-#include "SceneDijkstra.h"
+
 
 using namespace std;
 
@@ -9,22 +10,15 @@ static inline bool operator < (const Vector2D& lhs, const Vector2D& rhs) {
 	if (lhs.y > rhs.y) {
 		temp = true;
 	}
-
 	else if (lhs.y == rhs.y) {
 		if (lhs.x > rhs.x) {
 			temp = true;
 		}
 	}
-
 	return temp;
 }
 
-static inline bool operator < (const Node& lhs, const Node& rhs) {
-	return lhs.acumulatedCost>rhs.acumulatedCost;
-}
-
-
-SceneDijkstra::SceneDijkstra()
+SceneGreedyBestFirstSearch::SceneGreedyBestFirstSearch()
 {
 	waitAFrame = false;
 	foundPath = false;
@@ -61,7 +55,7 @@ SceneDijkstra::SceneDijkstra()
 
 }
 
-SceneDijkstra::~SceneDijkstra()
+SceneGreedyBestFirstSearch::~SceneGreedyBestFirstSearch()
 {
 	if (background_texture)
 		SDL_DestroyTexture(background_texture);
@@ -74,7 +68,7 @@ SceneDijkstra::~SceneDijkstra()
 	}
 }
 
-void SceneDijkstra::update(float dtime, SDL_Event *event)
+void SceneGreedyBestFirstSearch::update(float dtime, SDL_Event *event)
 {
 
 	/* Keyboard & Mouse events */
@@ -97,7 +91,7 @@ void SceneDijkstra::update(float dtime, SDL_Event *event)
 				//path.points.push_back(cell2pix(cell));
 
 			}
-			Dijkstra();
+			GreedyBestFirstSearch();
 
 
 		}
@@ -127,7 +121,7 @@ void SceneDijkstra::update(float dtime, SDL_Event *event)
 						while ((!isValidCell(coinPosition)) || (Vector2D::Distance(coinPosition, pix2cell(agents[0]->getPosition()))<3))
 							coinPosition = Vector2D((float)(rand() % num_cell_x), (float)(rand() % num_cell_y));
 					}
-					Dijkstra();
+					GreedyBestFirstSearch();
 				}
 				else
 				{
@@ -166,60 +160,11 @@ void SceneDijkstra::update(float dtime, SDL_Event *event)
 
 }
 
-void SceneDijkstra::Dijkstra() {
-	
-	frontier.push(mapeado [ pix2cell ( agents [0] ->getPosition())]);
-	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
-	Vector2D current;
-	Vector2D next;
-	std::vector<Connection>neighbours;
-	int ticksIniciales = SDL_GetTicks();
-	while (!frontier.empty()) {
-		current = frontier.top().coordenates;
-		if (current == pix2cell(coinPosition)) {
-			break;
-		}
-		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
-		for (int i = 0; i < neighbours.size(); i++) {
-
-			next = neighbours[i].GetToNode()->GetCoords();
-
-			float newCost = cost_so_far[current] + neighbours[i].GetCost();
-
-
-			//GETCOORDS ES CELDAS
-			if ((cost_so_far[next]==0)||(newCost<cost_so_far[next])) {
-				neighbours[i].GetToNode()->acumulatedCost = newCost;
-				cost_so_far[next] = newCost;
-				frontier.push(*neighbours[i].GetToNode());
-				cameFrom[next] = current;
-			}
-		}
-		frontier.pop();
-
-	}
-	std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
-
-	current = coinPosition;
-
-	path.points.push_back(cell2pix(current));
-
-	while (current != pix2cell(agents[0]->getPosition())) {
-		current = cameFrom[current];
-		//path.points.push_back(cell2pix(current));
-		path.points.insert(path.points.begin(), cell2pix(current));
-	}
-	//path = std::reverse(path.points.begin()), path.points.end());
-
-
-
-	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
-	foundPath = true;
-	ResetVisited();
+void SceneGreedyBestFirstSearch::GreedyBestFirstSearch() {
 
 }
 
-void SceneDijkstra::draw()
+void SceneGreedyBestFirstSearch::draw()
 {
 	SDL_SetRenderDrawColor(TheApp::Instance()->getRenderer(), 0, 255, 0, 127);
 
@@ -257,12 +202,12 @@ void SceneDijkstra::draw()
 	agents[0]->draw();
 }
 
-const char* SceneDijkstra::getTitle()
+const char* SceneGreedyBestFirstSearch::getTitle()
 {
 	return "SDL Steering Behaviors :: PathFinding1 Demo";
 }
 
-void SceneDijkstra::drawMaze()
+void SceneGreedyBestFirstSearch::drawMaze()
 {
 	if (draw_grid)
 	{
@@ -275,14 +220,9 @@ void SceneDijkstra::drawMaze()
 	{
 		SDL_RenderCopy(TheApp::Instance()->getRenderer(), background_texture, NULL, NULL);
 	}
-
-
-
-
-
 }
 
-void SceneDijkstra::drawCoin()
+void SceneGreedyBestFirstSearch::drawCoin()
 {
 	Vector2D coin_coords = cell2pix(coinPosition);
 	int offset = CELL_SIZE / 2;
@@ -290,9 +230,8 @@ void SceneDijkstra::drawCoin()
 	SDL_RenderCopy(TheApp::Instance()->getRenderer(), coin_texture, NULL, &dstrect);
 }
 
-void SceneDijkstra::initMaze()
+void SceneGreedyBestFirstSearch::initMaze()
 {
-
 	// Initialize a list of Rectagles describing the maze geometry (useful for collision avoidance)
 	SDL_Rect rect = { 0, 0, 1280, 32 };
 	maze_rects.push_back(rect);
@@ -398,12 +337,9 @@ void SceneDijkstra::initMaze()
 			Node tmp;
 			tmp.SetObstacle(!terrain[i][j]);
 			tmp.SetCoords(Vector2D{ (float)i,(float)j });
-			tmp.cost = 1;
+			tmp.acumulatedCost = 0;
 			nodos.push_back(tmp);
 			cameFrom[Vector2D{ (float)i,(float)j }] = NullVector;
-			cost_so_far[Vector2D{ (float)i,(float)j }] = 0;
-			mapeado[Vector2D{ (float)i,(float)j }] = tmp;
-
 		}
 	}
 
@@ -456,18 +392,17 @@ void SceneDijkstra::initMaze()
 
 }
 
-void SceneDijkstra::ResetVisited() {
+void SceneGreedyBestFirstSearch::ResetVisited() {
 	for (int j = 0; j < num_cell_y; j++)
 	{
 		for (int i = 0; i < num_cell_x; i++)
 		{
 			cameFrom[Vector2D{ (float)i,(float)j }] = NullVector;
-			cost_so_far[Vector2D{ (float)i,(float)j }] = 0;
 		}
 	}
 }
 
-bool SceneDijkstra::loadTextures(char* filename_bg, char* filename_coin)
+bool SceneGreedyBestFirstSearch::loadTextures(char* filename_bg, char* filename_coin)
 {
 	SDL_Surface *image = IMG_Load(filename_bg);
 	if (!image) {
@@ -492,18 +427,18 @@ bool SceneDijkstra::loadTextures(char* filename_bg, char* filename_coin)
 	return true;
 }
 
-Vector2D SceneDijkstra::cell2pix(Vector2D cell)
+Vector2D SceneGreedyBestFirstSearch::cell2pix(Vector2D cell)
 {
 	int offset = CELL_SIZE / 2;
 	return Vector2D(cell.x*CELL_SIZE + offset, cell.y*CELL_SIZE + offset);
 }
 
-Vector2D SceneDijkstra::pix2cell(Vector2D pix)
+Vector2D SceneGreedyBestFirstSearch::pix2cell(Vector2D pix)
 {
 	return Vector2D((float)((int)pix.x / CELL_SIZE), (float)((int)pix.y / CELL_SIZE));
 }
 
-bool SceneDijkstra::isValidCell(Vector2D cell)
+bool SceneGreedyBestFirstSearch::isValidCell(Vector2D cell)
 {
 	if ((cell.x < 0) || (cell.y < 0) || (cell.x >= terrain.size()) || (cell.y >= terrain[0].size()))
 		return false;
