@@ -198,7 +198,7 @@ void SceneDijkstra::Dijkstra() {
 		frontier.pop();
 
 	}
-	std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
+	//std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
 
 	current = coinPosition;
 
@@ -465,6 +465,12 @@ void SceneDijkstra::ResetVisited() {
 			cost_so_far[Vector2D{ (float)i,(float)j }] = 0;
 		}
 	}
+
+	for (int i = 0; i < nodos.size(); i++) {
+		nodos[i].acumulatedCost = 0;
+	}
+
+
 }
 
 bool SceneDijkstra::loadTextures(char* filename_bg, char* filename_coin)

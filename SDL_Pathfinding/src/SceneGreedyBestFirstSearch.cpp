@@ -1,6 +1,5 @@
-#include "SceneGreedyBestFirstSearch.h";
 #define NullVector Vector2D{-1-1}
-
+#include "SceneGreedyBestFirstSearch.h"
 
 using namespace std;
 
@@ -10,12 +9,47 @@ static inline bool operator < (const Vector2D& lhs, const Vector2D& rhs) {
 	if (lhs.y > rhs.y) {
 		temp = true;
 	}
+
 	else if (lhs.y == rhs.y) {
 		if (lhs.x > rhs.x) {
 			temp = true;
 		}
 	}
+
 	return temp;
+}
+
+static inline bool operator < (const Node& lhs, const Node& rhs) {
+	return lhs.acumulatedCost>rhs.acumulatedCost;
+}
+
+float SceneGreedyBestFirstSearch::ManhattanHeuristic(Node current, Node target) {
+	Vector2D currentPixel = pix2cell(current.GetCoords());
+	Vector2D targetPixel = pix2cell(target.GetCoords());
+	float distanceX = targetPixel.x - currentPixel.x;
+	float distanceY = targetPixel.y - currentPixel.y;
+	return sqrtf(distanceX*distanceX + distanceY*distanceY);
+}
+
+float SceneGreedyBestFirstSearch::ManhattanHeuristic(Node current, Vector2D target) {
+	Vector2D currentPixel = cell2pix(current.GetCoords());
+	Vector2D targetPixel = cell2pix (target);
+	float distanceX = targetPixel.x - currentPixel.x;
+	float distanceY = targetPixel.y - currentPixel.y;
+	//cout << distance.x << " - " << distance.y << endl;
+
+	return sqrtf(distanceX*distanceX + distanceY*distanceY);
+}
+
+float SceneGreedyBestFirstSearch::ManhattanHeuristic(Vector2D current, Vector2D target) {
+	Vector2D currentPixel = cell2pix(current);
+	Vector2D targetPixel = cell2pix(target);
+	float distanceX = targetPixel.x - currentPixel.y;
+	float distanceY = targetPixel.y - currentPixel.x;
+	//cout << distance.x << " - " << distance.y << endl;
+
+
+	return sqrtf(distanceX*distanceX + distanceY*distanceY);
 }
 
 SceneGreedyBestFirstSearch::SceneGreedyBestFirstSearch()
@@ -162,6 +196,66 @@ void SceneGreedyBestFirstSearch::update(float dtime, SDL_Event *event)
 
 void SceneGreedyBestFirstSearch::GreedyBestFirstSearch() {
 
+	frontier.push(mapeado[pix2cell(agents[0]->getPosition())]);
+	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
+	Vector2D current;
+	Vector2D next;
+	std::vector<Connection>neighbours;
+	int ticksIniciales = SDL_GetTicks();
+
+	while (!frontier.empty()) {
+		current = frontier.top().coordenates;
+		if (current == pix2cell(coinPosition)) {
+			break;
+		}
+		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
+		for (int i = 0; i < neighbours.size(); i++) {
+
+			next = neighbours[i].GetToNode()->GetCoords();
+
+			//float newCost = cost_so_far[current] + neighbours[i].GetCost();
+			float newCost = ManhattanHeuristic(neighbours[i].GetToNode()->GetCoords(), coinPosition);
+
+			cout << "COINPOS" << coinPosition.x << " - " << coinPosition.y << endl;
+
+			//GETCOORDS ES CELDAS
+			if (cameFrom[next]==NullVector) {
+				neighbours[i].GetToNode()->acumulatedCost = newCost;
+				cost_so_far[next] = newCost;
+				frontier.push(*neighbours[i].GetToNode());
+				cameFrom[next] = current;
+			}
+
+		}
+		frontier.pop();
+
+	}
+
+	//std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
+
+	current = coinPosition;
+
+	path.points.push_back(cell2pix(current));
+
+	int counter = 0;
+
+	while (current != pix2cell(agents[0]->getPosition())&&counter<1000) {
+		current = cameFrom[current];
+		//path.points.push_back(cell2pix(current));
+		path.points.insert(path.points.begin(), cell2pix(current));
+		
+		cout << "Reverse Path - Counter: " << counter<< "   " << current.x << " - " << current.y << endl;
+		counter++;
+	}
+
+	//path = std::reverse(path.points.begin()), path.points.end());
+
+
+
+	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
+	foundPath = true;
+	ResetVisited();
+
 }
 
 void SceneGreedyBestFirstSearch::draw()
@@ -220,6 +314,11 @@ void SceneGreedyBestFirstSearch::drawMaze()
 	{
 		SDL_RenderCopy(TheApp::Instance()->getRenderer(), background_texture, NULL, NULL);
 	}
+
+
+
+
+
 }
 
 void SceneGreedyBestFirstSearch::drawCoin()
@@ -232,6 +331,7 @@ void SceneGreedyBestFirstSearch::drawCoin()
 
 void SceneGreedyBestFirstSearch::initMaze()
 {
+
 	// Initialize a list of Rectagles describing the maze geometry (useful for collision avoidance)
 	SDL_Rect rect = { 0, 0, 1280, 32 };
 	maze_rects.push_back(rect);
@@ -337,9 +437,12 @@ void SceneGreedyBestFirstSearch::initMaze()
 			Node tmp;
 			tmp.SetObstacle(!terrain[i][j]);
 			tmp.SetCoords(Vector2D{ (float)i,(float)j });
-			tmp.acumulatedCost = 0;
+			tmp.cost = 1;
 			nodos.push_back(tmp);
 			cameFrom[Vector2D{ (float)i,(float)j }] = NullVector;
+			cost_so_far[Vector2D{ (float)i,(float)j }] = 0;
+			mapeado[Vector2D{ (float)i,(float)j }] = tmp;
+
 		}
 	}
 
@@ -398,8 +501,15 @@ void SceneGreedyBestFirstSearch::ResetVisited() {
 		for (int i = 0; i < num_cell_x; i++)
 		{
 			cameFrom[Vector2D{ (float)i,(float)j }] = NullVector;
+			cost_so_far[Vector2D{ (float)i,(float)j }] = 0;
 		}
 	}
+
+	for (int i = 0; i < nodos.size(); i++) {
+		nodos[i].acumulatedCost = 0;
+	}
+
+
 }
 
 bool SceneGreedyBestFirstSearch::loadTextures(char* filename_bg, char* filename_coin)

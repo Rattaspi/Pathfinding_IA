@@ -7,6 +7,7 @@
 #include "Graph.h"
 #include <queue>
 #include <map>
+#include <cmath>
 
 class SceneGreedyBestFirstSearch :
 	public Scene
@@ -52,4 +53,9 @@ private:
 	std::map<Vector2D, float> cost_so_far;
 	void GreedyBestFirstSearch();
 	void ResetVisited();
+	float ManhattanHeuristic(Node,Node);
+	float ManhattanHeuristic(Node, Vector2D);
+	float ManhattanHeuristic(Vector2D, Vector2D);
+
+
 };
