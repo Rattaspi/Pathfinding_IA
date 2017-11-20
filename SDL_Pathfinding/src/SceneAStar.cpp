@@ -290,8 +290,11 @@ void SceneAStar::drawMaze()
 		SDL_RenderCopy(TheApp::Instance()->getRenderer(), background_texture, NULL, NULL);
 	}
 
+	for (int j = 0; j < nodos.size(); j++){
+		if(nodos[j].cost>500)
+					draw_circle(TheApp::Instance()->getRenderer(), cell2pix(nodos[j].GetCoords()).x, cell2pix(nodos[j].GetCoords()).y, 15, 0, 0, 255, 255);
 
-
+	}
 
 
 }
@@ -399,6 +402,7 @@ void SceneAStar::initMaze()
 					terrain[i][j] = 0;
 					break;
 				}
+
 			}
 
 		}
@@ -412,7 +416,16 @@ void SceneAStar::initMaze()
 			Node tmp;
 			tmp.SetObstacle(!terrain[i][j]);
 			tmp.SetCoords(Vector2D{ (float)i,(float)j });
-			tmp.cost = 1;
+
+
+			if ( i==18||i == 19 || i == 20 ){
+				if (j == 10 || j == 11 || j == 12 || j == 13 || j==9 || j==14 || j==15) {
+					tmp.cost = tmp.waterNodeWeight;
+				}
+			}else
+			tmp.cost = tmp.groundNodeWeight;
+
+
 			nodos.push_back(tmp);
 			cameFrom[Vector2D{ (float)i,(float)j }] = NullVector;
 			cost_so_far[Vector2D{ (float)i,(float)j }] = 0;

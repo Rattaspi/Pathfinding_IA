@@ -14,4 +14,6 @@ public:
 	void SetCoords(Vector2D coords);
 	float GetCost();
 	bool IsObstacle();
+	const static int groundNodeWeight = 400;
+	const static int waterNodeWeight = 50000;
 };

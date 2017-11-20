@@ -12,13 +12,27 @@ SteeringBehavior::~SteeringBehavior()
 
 Vector2D SteeringBehavior::Seek(Agent *agent, Vector2D target, float dtime)
 {
+	Vector2D steering_force{ 0,0 };
+
+
+
 	Vector2D desired_velocity = target - agent->position;
+
+	if (desired_velocity.x > 600 || desired_velocity.x < -600) {
+		agent->setPosition(target);
+	}
+	else {
+
 	desired_velocity.Normalize();
 	desired_velocity *= agent->max_velocity;
 
-	Vector2D steering_force = desired_velocity - agent->velocity;
-	steering_force /= agent->max_velocity;
-	steering_force = steering_force * agent->max_force;
+
+
+
+		steering_force = desired_velocity - agent->velocity;
+		steering_force /= agent->max_velocity;
+		steering_force = steering_force * agent->max_force;
+	}
 
 	return steering_force;
 }
