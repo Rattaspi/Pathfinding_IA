@@ -50,8 +50,10 @@ SceneDijkstra::SceneDijkstra()
 
 	// set the coin in a random cell (but at least 3 cells far from the agent)
 	coinPosition = Vector2D(-1, -1);
-	while ((!isValidCell(coinPosition)) || (Vector2D::Distance(coinPosition, rand_cell)<3))
+	while ((!isValidCell(coinPosition)) || (Vector2D::Distance(coinPosition, rand_cell) < 3)) {
 		coinPosition = Vector2D((float)(rand() % num_cell_x), (float)(rand() % num_cell_y));
+		cout << "coinPos (Coordenadas) " << coinPosition.x << " - " << coinPosition.y << endl;
+	}
 
 	// PathFollowing next Target
 	currentTarget = Vector2D(0, 0);
@@ -124,8 +126,10 @@ void SceneDijkstra::update(float dtime, SDL_Event *event)
 					if (pix2cell(agents[0]->getPosition()) == coinPosition)
 					{
 						coinPosition = Vector2D(-1, -1);
-						while ((!isValidCell(coinPosition)) || (Vector2D::Distance(coinPosition, pix2cell(agents[0]->getPosition()))<3))
+						while ((!isValidCell(coinPosition)) || (Vector2D::Distance(coinPosition, pix2cell(agents[0]->getPosition())) < 3)) {
 							coinPosition = Vector2D((float)(rand() % num_cell_x), (float)(rand() % num_cell_y));
+							cout << "coinPos (Coordenadas) " << coinPosition.x <<" - " << coinPosition.y << endl;
+						}
 					}
 					Dijkstra();
 				}
@@ -176,7 +180,8 @@ void SceneDijkstra::Dijkstra() {
 	int ticksIniciales = SDL_GetTicks();
 	while (!frontier.empty()) {
 		current = frontier.top().coordenates;
-		if (current == pix2cell(coinPosition)) {
+		if (current == (coinPosition)) {
+			cout << "Broke" << endl;
 			break;
 		}
 		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
@@ -259,7 +264,7 @@ void SceneDijkstra::draw()
 
 const char* SceneDijkstra::getTitle()
 {
-	return "SDL Steering Behaviors :: PathFinding1 Demo";
+	return "SDL Steering Behaviors :: Scene Dijkstra";
 }
 
 void SceneDijkstra::drawMaze()
@@ -469,8 +474,10 @@ void SceneDijkstra::ResetVisited() {
 	for (int i = 0; i < nodos.size(); i++) {
 		nodos[i].acumulatedCost = 0;
 	}
-
-
+	int frontierSize = frontier.size();
+	for (int i = 0; i < frontierSize; i++) {
+		frontier.pop();
+	}
 }
 
 bool SceneDijkstra::loadTextures(char* filename_bg, char* filename_coin)

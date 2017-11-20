@@ -136,6 +136,7 @@
     <ClCompile Include="..\src\Graph.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\Node.cpp" />
+    <ClCompile Include="..\src\SceneAStar.cpp" />
     <ClCompile Include="..\src\SceneBreadthFirst.cpp" />
     <ClCompile Include="..\src\SceneDijkstra.cpp" />
     <ClCompile Include="..\src\SceneGreedyBestFirstSearch.cpp" />
@@ -150,6 +151,7 @@
     <ClInclude Include="..\src\Graph.h" />
     <ClInclude Include="..\src\Node.h" />
     <ClInclude Include="..\src\Path.h" />
+    <ClInclude Include="..\src\SceneAStar.h" />
     <ClInclude Include="..\src\SceneBreadthFirst.h" />
     <ClInclude Include="..\src\SceneDijkstra.h" />
     <ClInclude Include="..\src\SceneGreedyBestFirstSearch.h" />

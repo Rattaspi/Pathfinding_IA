@@ -23,32 +23,13 @@ static inline bool operator < (const Node& lhs, const Node& rhs) {
 	return lhs.acumulatedCost>rhs.acumulatedCost;
 }
 
-float SceneGreedyBestFirstSearch::ManhattanHeuristic(Node current, Node target) {
-	Vector2D currentPixel = pix2cell(current.GetCoords());
-	Vector2D targetPixel = pix2cell(target.GetCoords());
-	float distanceX = targetPixel.x - currentPixel.x;
-	float distanceY = targetPixel.y - currentPixel.y;
-	return sqrtf(distanceX*distanceX + distanceY*distanceY);
-}
-
-float SceneGreedyBestFirstSearch::ManhattanHeuristic(Node current, Vector2D target) {
-	Vector2D currentPixel = cell2pix(current.GetCoords());
-	Vector2D targetPixel = cell2pix (target);
-	float distanceX = targetPixel.x - currentPixel.x;
-	float distanceY = targetPixel.y - currentPixel.y;
-	//cout << distance.x << " - " << distance.y << endl;
-
-	return sqrtf(distanceX*distanceX + distanceY*distanceY);
-}
-
 float SceneGreedyBestFirstSearch::ManhattanHeuristic(Vector2D current, Vector2D target) {
 	Vector2D currentPixel = cell2pix(current);
 	Vector2D targetPixel = cell2pix(target);
-	float distanceX = targetPixel.x - currentPixel.y;
-	float distanceY = targetPixel.y - currentPixel.x;
+
+	float distanceX = targetPixel.x - currentPixel.x;
+	float distanceY = targetPixel.y - currentPixel.y;
 	//cout << distance.x << " - " << distance.y << endl;
-
-
 	return sqrtf(distanceX*distanceX + distanceY*distanceY);
 }
 
@@ -195,17 +176,20 @@ void SceneGreedyBestFirstSearch::update(float dtime, SDL_Event *event)
 }
 
 void SceneGreedyBestFirstSearch::GreedyBestFirstSearch() {
-
 	frontier.push(mapeado[pix2cell(agents[0]->getPosition())]);
+
 	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
+
+
 	Vector2D current;
 	Vector2D next;
 	std::vector<Connection>neighbours;
-	int ticksIniciales = SDL_GetTicks();
+
 
 	while (!frontier.empty()) {
 		current = frontier.top().coordenates;
-		if (current == pix2cell(coinPosition)) {
+		if (current == (coinPosition)) {
+			cout << "Broke" << endl;
 			break;
 		}
 		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
@@ -213,41 +197,30 @@ void SceneGreedyBestFirstSearch::GreedyBestFirstSearch() {
 
 			next = neighbours[i].GetToNode()->GetCoords();
 
-			//float newCost = cost_so_far[current] + neighbours[i].GetCost();
-			float newCost = ManhattanHeuristic(neighbours[i].GetToNode()->GetCoords(), coinPosition);
-
-			cout << "COINPOS" << coinPosition.x << " - " << coinPosition.y << endl;
-
 			//GETCOORDS ES CELDAS
-			if (cameFrom[next]==NullVector) {
+			if (cameFrom[next] == NullVector) {
+				float newCost = ManhattanHeuristic(next, coinPosition);
 				neighbours[i].GetToNode()->acumulatedCost = newCost;
-				cost_so_far[next] = newCost;
+
 				frontier.push(*neighbours[i].GetToNode());
 				cameFrom[next] = current;
 			}
-
 		}
+
 		frontier.pop();
 
 	}
-
 	//std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
 
 	current = coinPosition;
 
 	path.points.push_back(cell2pix(current));
 
-	int counter = 0;
-
-	while (current != pix2cell(agents[0]->getPosition())&&counter<1000) {
+	while (current != pix2cell(agents[0]->getPosition())) {
 		current = cameFrom[current];
 		//path.points.push_back(cell2pix(current));
 		path.points.insert(path.points.begin(), cell2pix(current));
-		
-		cout << "Reverse Path - Counter: " << counter<< "   " << current.x << " - " << current.y << endl;
-		counter++;
 	}
-
 	//path = std::reverse(path.points.begin()), path.points.end());
 
 
@@ -255,7 +228,6 @@ void SceneGreedyBestFirstSearch::GreedyBestFirstSearch() {
 	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
 	foundPath = true;
 	ResetVisited();
-
 }
 
 void SceneGreedyBestFirstSearch::draw()
@@ -298,7 +270,7 @@ void SceneGreedyBestFirstSearch::draw()
 
 const char* SceneGreedyBestFirstSearch::getTitle()
 {
-	return "SDL Steering Behaviors :: PathFinding1 Demo";
+	return "SDL Steering Behaviors :: Scene Greedy Best First Search";
 }
 
 void SceneGreedyBestFirstSearch::drawMaze()
@@ -438,6 +410,8 @@ void SceneGreedyBestFirstSearch::initMaze()
 			tmp.SetObstacle(!terrain[i][j]);
 			tmp.SetCoords(Vector2D{ (float)i,(float)j });
 			tmp.cost = 1;
+			tmp.acumulatedCost = 0;
+
 			nodos.push_back(tmp);
 			cameFrom[Vector2D{ (float)i,(float)j }] = NullVector;
 			cost_so_far[Vector2D{ (float)i,(float)j }] = 0;
@@ -507,6 +481,11 @@ void SceneGreedyBestFirstSearch::ResetVisited() {
 
 	for (int i = 0; i < nodos.size(); i++) {
 		nodos[i].acumulatedCost = 0;
+	}
+
+	int frontierSize = frontier.size();
+	for (int i = 0; i < frontierSize; i++) {
+		frontier.pop();
 	}
 
 

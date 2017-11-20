@@ -1,5 +1,5 @@
 #define NullVector Vector2D{-1-1}
-#include "SceneBreadthFirst.h"
+#include "SceneAStar.h"
 
 using namespace std;
 
@@ -19,7 +19,21 @@ static inline bool operator < (const Vector2D& lhs, const Vector2D& rhs) {
 	return temp;
 }
 
-SceneBreadthFirst::SceneBreadthFirst()
+static inline bool operator < (const Node& lhs, const Node& rhs) {
+	return lhs.acumulatedCost>rhs.acumulatedCost;
+}
+
+float SceneAStar::ManhattanHeuristic(Vector2D current, Vector2D target) {
+	Vector2D currentPixel = cell2pix(current);
+	Vector2D targetPixel = cell2pix(target);
+
+	float distanceX = targetPixel.x - currentPixel.x;
+	float distanceY = targetPixel.y - currentPixel.y;
+	//cout << distance.x << " - " << distance.y << endl;
+	return sqrtf(distanceX*distanceX + distanceY*distanceY);
+}
+
+SceneAStar::SceneAStar()
 {
 	waitAFrame = false;
 	foundPath = false;
@@ -45,8 +59,10 @@ SceneBreadthFirst::SceneBreadthFirst()
 
 	// set the coin in a random cell (but at least 3 cells far from the agent)
 	coinPosition = Vector2D(-1, -1);
-	while ((!isValidCell(coinPosition)) || (Vector2D::Distance(coinPosition, rand_cell)<3))
+	while ((!isValidCell(coinPosition)) || (Vector2D::Distance(coinPosition, rand_cell) < 3)) {
 		coinPosition = Vector2D((float)(rand() % num_cell_x), (float)(rand() % num_cell_y));
+		cout << "coinPos (Coordenadas) " << coinPosition.x << " - " << coinPosition.y << endl;
+	}
 
 	// PathFollowing next Target
 	currentTarget = Vector2D(0, 0);
@@ -56,7 +72,7 @@ SceneBreadthFirst::SceneBreadthFirst()
 
 }
 
-SceneBreadthFirst::~SceneBreadthFirst()
+SceneAStar::~SceneAStar()
 {
 	if (background_texture)
 		SDL_DestroyTexture(background_texture);
@@ -69,7 +85,7 @@ SceneBreadthFirst::~SceneBreadthFirst()
 	}
 }
 
-void SceneBreadthFirst::update(float dtime, SDL_Event *event)
+void SceneAStar::update(float dtime, SDL_Event *event)
 {
 
 	/* Keyboard & Mouse events */
@@ -92,7 +108,7 @@ void SceneBreadthFirst::update(float dtime, SDL_Event *event)
 				//path.points.push_back(cell2pix(cell));
 
 			}
-			BreadthFirst();
+			AStar();
 
 
 		}
@@ -119,15 +135,17 @@ void SceneBreadthFirst::update(float dtime, SDL_Event *event)
 					if (pix2cell(agents[0]->getPosition()) == coinPosition)
 					{
 						coinPosition = Vector2D(-1, -1);
-						while ((!isValidCell(coinPosition)) || (Vector2D::Distance(coinPosition, pix2cell(agents[0]->getPosition()))<3))
+						while ((!isValidCell(coinPosition)) || (Vector2D::Distance(coinPosition, pix2cell(agents[0]->getPosition())) < 3)) {
 							coinPosition = Vector2D((float)(rand() % num_cell_x), (float)(rand() % num_cell_y));
+							cout << "coinPos (Coordenadas) " << coinPosition.x << " - " << coinPosition.y << endl;
+						}
 					}
-					BreadthFirst();
+					AStar();
 				}
 				else
 				{
 					//if (dtime > 0.3f)
-						//dtime = 0.2f;
+					//dtime = 0.2f;
 
 
 					Vector2D steering_force = agents[0]->Behavior()->Arrive(agents[0], currentTarget, path.ARRIVAL_DISTANCE, dtime);
@@ -153,7 +171,7 @@ void SceneBreadthFirst::update(float dtime, SDL_Event *event)
 	else
 	{
 		if (foundPath) {
-		agents[0]->update(Vector2D(0, 0), dtime, event);
+			agents[0]->update(Vector2D(0, 0), dtime, event);
 		}
 	}
 
@@ -161,37 +179,44 @@ void SceneBreadthFirst::update(float dtime, SDL_Event *event)
 
 }
 
-void SceneBreadthFirst::BreadthFirst() {
-	frontier.push(pix2cell(agents[0]->getPosition()));
+void SceneAStar::AStar() {
+
+	frontier.push(mapeado[pix2cell(agents[0]->getPosition())]);
 	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
 	Vector2D current;
 	Vector2D next;
 	std::vector<Connection>neighbours;
-
-	foundPath = false;
-
+	int ticksIniciales = SDL_GetTicks();
 	while (!frontier.empty()) {
-		current = frontier.front();
-		if (current == pix2cell(coinPosition)) {
+		current = frontier.top().coordenates;
+		if (current == (coinPosition)) {
+			cout << "Broke" << endl;
 			break;
 		}
 		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
 		for (int i = 0; i < neighbours.size(); i++) {
 
-			if (Graph::EqualVector(cameFrom[neighbours[i].GetToNode()->GetCoords()], NullVector)) {
+			next = neighbours[i].GetToNode()->GetCoords();
 
-				frontier.push(neighbours[i].GetToNode()->GetCoords());
-				cameFrom[neighbours[i].GetToNode()->GetCoords()] = current;
+			float newCost = cost_so_far[current] + neighbours[i].GetCost() + ManhattanHeuristic(next,coinPosition);
+
+
+			//GETCOORDS ES CELDAS
+			if ((cost_so_far[next] == 0) || (newCost<cost_so_far[next])) {
+				neighbours[i].GetToNode()->acumulatedCost = newCost;
+				cost_so_far[next] = newCost;
+				frontier.push(*neighbours[i].GetToNode());
+				cameFrom[next] = current;
 			}
 		}
 		frontier.pop();
+
 	}
+	//std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
 
 	current = coinPosition;
 
 	path.points.push_back(cell2pix(current));
-
-
 
 	while (current != pix2cell(agents[0]->getPosition())) {
 		current = cameFrom[current];
@@ -200,19 +225,20 @@ void SceneBreadthFirst::BreadthFirst() {
 	}
 	//path = std::reverse(path.points.begin()), path.points.end());
 
+
+
 	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
-
-
 	foundPath = true;
 	ResetVisited();
- }
 
-void SceneBreadthFirst::draw()
+}
+
+void SceneAStar::draw()
 {
 	SDL_SetRenderDrawColor(TheApp::Instance()->getRenderer(), 0, 255, 0, 127);
 
 	for (unsigned int i = 0; i < graph.connections.size(); ++i) {
-		SDL_RenderDrawLine(TheApp::Instance()->getRenderer(),cell2pix(graph.connections[i].GetFromNode()->GetCoords()).x, cell2pix(graph.connections[i].GetFromNode()->GetCoords()).y, cell2pix(graph.connections[i].GetToNode()->GetCoords()).x, cell2pix(graph.connections[i].GetToNode()->GetCoords()).y);
+		SDL_RenderDrawLine(TheApp::Instance()->getRenderer(), cell2pix(graph.connections[i].GetFromNode()->GetCoords()).x, cell2pix(graph.connections[i].GetFromNode()->GetCoords()).y, cell2pix(graph.connections[i].GetToNode()->GetCoords()).x, cell2pix(graph.connections[i].GetToNode()->GetCoords()).y);
 	}
 	SDL_SetRenderDrawColor(TheApp::Instance()->getRenderer(), 255, 255, 255, 127);
 
@@ -245,12 +271,12 @@ void SceneBreadthFirst::draw()
 	agents[0]->draw();
 }
 
-const char* SceneBreadthFirst::getTitle()
+const char* SceneAStar::getTitle()
 {
-	return "SDL Steering Behaviors :: Scene Breadth First Search";
+	return "SDL Steering Behaviors :: SceneAStar";
 }
 
-void SceneBreadthFirst::drawMaze()
+void SceneAStar::drawMaze()
 {
 	if (draw_grid)
 	{
@@ -270,7 +296,7 @@ void SceneBreadthFirst::drawMaze()
 
 }
 
-void SceneBreadthFirst::drawCoin()
+void SceneAStar::drawCoin()
 {
 	Vector2D coin_coords = cell2pix(coinPosition);
 	int offset = CELL_SIZE / 2;
@@ -278,7 +304,7 @@ void SceneBreadthFirst::drawCoin()
 	SDL_RenderCopy(TheApp::Instance()->getRenderer(), coin_texture, NULL, &dstrect);
 }
 
-void SceneBreadthFirst::initMaze()
+void SceneAStar::initMaze()
 {
 
 	// Initialize a list of Rectagles describing the maze geometry (useful for collision avoidance)
@@ -382,14 +408,16 @@ void SceneBreadthFirst::initMaze()
 	{
 		for (int i = 0; i < num_cell_x; i++)
 		{
-		
+
 			Node tmp;
 			tmp.SetObstacle(!terrain[i][j]);
 			tmp.SetCoords(Vector2D{ (float)i,(float)j });
-			tmp.acumulatedCost = 0;
+			tmp.cost = 1;
 			nodos.push_back(tmp);
 			cameFrom[Vector2D{ (float)i,(float)j }] = NullVector;
-			
+			cost_so_far[Vector2D{ (float)i,(float)j }] = 0;
+			mapeado[Vector2D{ (float)i,(float)j }] = tmp;
+
 		}
 	}
 
@@ -412,8 +440,8 @@ void SceneBreadthFirst::initMaze()
 	//LAS DE LA IZQUIERDA------------------------------------------------------------------------------------------
 
 	graph.connections.push_back(Connection(nodos[num_cell_x * 10], nodos[num_cell_x * 11]));
-	graph.connections.push_back(Connection(nodos[num_cell_x * 10], nodos[num_cell_x * 10+1]));
-	graph.connections.push_back(Connection(nodos[num_cell_x * 10], nodos[num_cell_x * 10+num_cell_x-1]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 10], nodos[num_cell_x * 10 + 1]));
+	graph.connections.push_back(Connection(nodos[num_cell_x * 10], nodos[num_cell_x * 10 + num_cell_x - 1]));
 
 	graph.connections.push_back(Connection(nodos[num_cell_x * 11], nodos[num_cell_x * 12]));
 	graph.connections.push_back(Connection(nodos[num_cell_x * 11], nodos[num_cell_x * 11 + 1]));
@@ -442,22 +470,28 @@ void SceneBreadthFirst::initMaze()
 
 }
 
-void SceneBreadthFirst::ResetVisited() {
+void SceneAStar::ResetVisited() {
 	for (int j = 0; j < num_cell_y; j++)
 	{
 		for (int i = 0; i < num_cell_x; i++)
 		{
 			cameFrom[Vector2D{ (float)i,(float)j }] = NullVector;
+			cost_so_far[Vector2D{ (float)i,(float)j }] = 0;
 		}
 	}
 
+	for (int i = 0; i < nodos.size(); i++) {
+		nodos[i].acumulatedCost = 0;
+	}
+
 	int frontierSize = frontier.size();
+
 	for (int i = 0; i < frontierSize; i++) {
 		frontier.pop();
 	}
 }
 
-bool SceneBreadthFirst::loadTextures(char* filename_bg, char* filename_coin)
+bool SceneAStar::loadTextures(char* filename_bg, char* filename_coin)
 {
 	SDL_Surface *image = IMG_Load(filename_bg);
 	if (!image) {
@@ -482,18 +516,18 @@ bool SceneBreadthFirst::loadTextures(char* filename_bg, char* filename_coin)
 	return true;
 }
 
-Vector2D SceneBreadthFirst::cell2pix(Vector2D cell)
+Vector2D SceneAStar::cell2pix(Vector2D cell)
 {
 	int offset = CELL_SIZE / 2;
 	return Vector2D(cell.x*CELL_SIZE + offset, cell.y*CELL_SIZE + offset);
 }
 
-Vector2D SceneBreadthFirst::pix2cell(Vector2D pix)
+Vector2D SceneAStar::pix2cell(Vector2D pix)
 {
 	return Vector2D((float)((int)pix.x / CELL_SIZE), (float)((int)pix.y / CELL_SIZE));
 }
 
-bool SceneBreadthFirst::isValidCell(Vector2D cell)
+bool SceneAStar::isValidCell(Vector2D cell)
 {
 	if ((cell.x < 0) || (cell.y < 0) || (cell.x >= terrain.size()) || (cell.y >= terrain[0].size()))
 		return false;

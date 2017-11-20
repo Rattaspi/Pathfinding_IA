@@ -6,6 +6,7 @@
 #include "ScenePathFinding.h"
 #include "SceneDijkstra.h"
 #include "SceneGreedyBestFirstSearch.h"
+#include "SceneAStar.h"
 
 #define FRAMES_PER_SEC 30
 
@@ -63,6 +64,14 @@ int main(int argc, char ** argv)
 				curr_scene = new SceneGreedyBestFirstSearch;
 				app->setWindowTitle(curr_scene->getTitle());
 			}
+
+			if (event.key.keysym.scancode == SDL_SCANCODE_5)
+			{
+				delete(curr_scene);
+				curr_scene = new SceneAStar;
+				app->setWindowTitle(curr_scene->getTitle());
+			}
+
 			if ((event.key.keysym.scancode == SDL_SCANCODE_Q) || (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE))
 			{
 				quit = true;
