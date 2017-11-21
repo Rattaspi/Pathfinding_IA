@@ -7,21 +7,21 @@
 #include "Graph.h"
 #include <queue>
 #include <map>
-#include <cmath>
 
-class SceneGreedyBestFirstSearch :
+class SceneMultipleTarget :
 	public Scene
 {
 public:
-	SceneGreedyBestFirstSearch();
-	~SceneGreedyBestFirstSearch();
+	SceneMultipleTarget();
+	~SceneMultipleTarget();
 	void update(float dtime, SDL_Event *event);
 	void draw();
 	const char* getTitle();
 
 
 private:
-
+	enum algoritmo { BFS, DIJKSTRA, GREEDY, ASTAR };
+	algoritmo algorithm;
 	std::vector<Agent*> agents;
 	Vector2D coinPosition;
 	Vector2D currentTarget;
@@ -43,21 +43,22 @@ private:
 	bool waitAFrameB;
 	std::vector< std::vector<int> > terrain;
 	std::vector<Node> nodos;
+	std::vector<Vector2D> coins;
+
 	Vector2D cell2pix(Vector2D cell);
 	Vector2D pix2cell(Vector2D pix);
 	bool isValidCell(Vector2D cell);
 	Graph graph;
-	std::priority_queue<Node> frontier;
-	std::vector<Vector2D> frontierToDraw;
+	std::priority_queue<Node> priorityFrontier;
+	std::queue<Vector2D> frontier;
 
 	std::map<Vector2D, Vector2D> cameFrom;
 	std::map<Vector2D, Node> mapeado;
 	std::map<Vector2D, float> cost_so_far;
-	void GreedyBestFirstSearch();
+	void AStar();
+	void BreadthFirstSearch();
+	void GreedyBfs();
+	void Dijkstra();
 	void ResetVisited();
-	float ManhattanHeuristic(Node,Node);
-	float ManhattanHeuristic(Node, Vector2D);
-	float ManhattanHeuristic(Vector2D, Vector2D);
-
-
+	float EulerHeuristic(Vector2D current, Vector2D target);
 };

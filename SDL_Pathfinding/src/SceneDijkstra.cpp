@@ -99,6 +99,8 @@ void SceneDijkstra::update(float dtime, SDL_Event *event)
 				//path.points.push_back(cell2pix(cell));
 
 			}
+
+
 			Dijkstra();
 
 

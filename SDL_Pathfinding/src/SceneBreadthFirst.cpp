@@ -93,8 +93,6 @@ void SceneBreadthFirst::update(float dtime, SDL_Event *event)
 
 			}
 			BreadthFirst();
-
-
 		}
 		break;
 	default:

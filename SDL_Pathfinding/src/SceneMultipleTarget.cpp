@@ -1,5 +1,5 @@
 #define NullVector Vector2D{-1-1}
-#include "SceneGreedyBestFirstSearch.h"
+#include "SceneMultipleTarget.h"
 
 using namespace std;
 
@@ -20,26 +20,20 @@ static inline bool operator < (const Vector2D& lhs, const Vector2D& rhs) {
 }
 
 static inline bool operator < (const Node& lhs, const Node& rhs) {
-	return lhs.acumulatedCost<rhs.acumulatedCost;
+	return lhs.acumulatedCost>rhs.acumulatedCost;
 }
 
-float SceneGreedyBestFirstSearch::ManhattanHeuristic(Vector2D current, Vector2D target) {
+float SceneMultipleTarget::EulerHeuristic(Vector2D current, Vector2D target) {
 	Vector2D currentPixel = cell2pix(current);
 	Vector2D targetPixel = cell2pix(target);
 
 	float distanceX = targetPixel.x - currentPixel.x;
 	float distanceY = targetPixel.y - currentPixel.y;
-	//cout << " X " << distanceX << " - " << distanceY <<  " Y " << endl;
-	
-	float result = sqrtf(distanceX*distanceX + distanceY*distanceY);
-
-	cout << result<< endl;
-
-
-	return result;
+	//cout << distance.x << " - " << distance.y << endl;
+	return sqrtf(distanceX*distanceX + distanceY*distanceY);
 }
 
-SceneGreedyBestFirstSearch::SceneGreedyBestFirstSearch()
+SceneMultipleTarget::SceneMultipleTarget()
 {
 	waitAFrame = false;
 	foundPath = false;
@@ -65,20 +59,26 @@ SceneGreedyBestFirstSearch::SceneGreedyBestFirstSearch()
 
 	// set the coin in a random cell (but at least 3 cells far from the agent)
 	coinPosition = Vector2D(-1, -1);
-	while ((!isValidCell(coinPosition)) || (Vector2D::Distance(coinPosition, rand_cell) < 3)) {
-		coinPosition = Vector2D((float)(rand() % num_cell_x), (float)(rand() % num_cell_y));
-		cout << "coinPos (Coordenadas) " << coinPosition.x << " - " << coinPosition.y << endl;
+	while ((coins.size() < 4)) {
+
+				coinPosition = Vector2D((float)(rand() % num_cell_x), (float)(rand() % num_cell_y));
+
+				if (isValidCell(coinPosition)) {
+					coins.push_back(coinPosition);
+					cout << "coinPos (Coordenadas) " << coinPosition.x << " - " << coinPosition.y << endl;
+
+		}
 	}
 
 	// PathFollowing next Target
 	currentTarget = Vector2D(0, 0);
 	currentTargetIndex = -1;
 
-
+	algorithm = algoritmo::BFS;
 
 }
 
-SceneGreedyBestFirstSearch::~SceneGreedyBestFirstSearch()
+SceneMultipleTarget::~SceneMultipleTarget()
 {
 	if (background_texture)
 		SDL_DestroyTexture(background_texture);
@@ -91,7 +91,7 @@ SceneGreedyBestFirstSearch::~SceneGreedyBestFirstSearch()
 	}
 }
 
-void SceneGreedyBestFirstSearch::update(float dtime, SDL_Event *event)
+void SceneMultipleTarget::update(float dtime, SDL_Event *event)
 {
 
 	/* Keyboard & Mouse events */
@@ -114,10 +114,13 @@ void SceneGreedyBestFirstSearch::update(float dtime, SDL_Event *event)
 				//path.points.push_back(cell2pix(cell));
 
 			}
-			GreedyBestFirstSearch();
+
+
+			AStar();
 
 
 		}
+
 		break;
 	default:
 		break;
@@ -146,7 +149,26 @@ void SceneGreedyBestFirstSearch::update(float dtime, SDL_Event *event)
 							cout << "coinPos (Coordenadas) " << coinPosition.x << " - " << coinPosition.y << endl;
 						}
 					}
-					GreedyBestFirstSearch();
+					switch (algorithm) {
+					case algoritmo::BFS:
+						BreadthFirstSearch();
+						cout << "Breadth" << endl;
+
+						break;
+
+					case algoritmo::DIJKSTRA:
+						Dijkstra();
+						break;
+
+					case algoritmo::GREEDY:
+						GreedyBfs();
+						break;
+
+					case algoritmo::ASTAR:
+						AStar();
+						break;
+					}
+
 				}
 				else
 				{
@@ -185,18 +207,177 @@ void SceneGreedyBestFirstSearch::update(float dtime, SDL_Event *event)
 
 }
 
-void SceneGreedyBestFirstSearch::GreedyBestFirstSearch() {
+void SceneMultipleTarget::AStar() {
+	path.points.clear();
 
-	frontier.push(mapeado[pix2cell(agents[0]->getPosition())]);
-	mapeado[pix2cell(agents[0]->getPosition())].acumulatedCost = 0;
+	priorityFrontier.push(mapeado[pix2cell(agents[0]->getPosition())]);
 	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
-	
 	Vector2D current;
 	Vector2D next;
 	std::vector<Connection>neighbours;
 	int ticksIniciales = SDL_GetTicks();
+	while (!priorityFrontier.empty()) {
+		current = priorityFrontier.top().coordenates;
+		if (current == (coinPosition)) {
+			cout << "Broke" << endl;
+			break;
+		}
+		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
+		for (int i = 0; i < neighbours.size(); i++) {
+
+			next = neighbours[i].GetToNode()->GetCoords();
+
+			float newCost = cost_so_far[current] + neighbours[i].GetCost() + EulerHeuristic(next, coinPosition);
+
+
+			//GETCOORDS ES CELDAS
+			if ((cost_so_far[next] == 0) || (newCost<cost_so_far[next])) {
+				neighbours[i].GetToNode()->acumulatedCost = newCost;
+				cost_so_far[next] = newCost;
+				priorityFrontier.push(*neighbours[i].GetToNode());
+				cameFrom[next] = current;
+			}
+		}
+		priorityFrontier.pop();
+
+	}
+	//std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
+
+	current = coinPosition;
+
+	path.points.push_back(cell2pix(current));
+
+	while (current != pix2cell(agents[0]->getPosition())) {
+		current = cameFrom[current];
+		//path.points.push_back(cell2pix(current));
+		path.points.insert(path.points.begin(), cell2pix(current));
+	}
+	//path = std::reverse(path.points.begin()), path.points.end());
+
+
+
+	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
+	foundPath = true;
+	ResetVisited();
+
+}
+
+void SceneMultipleTarget::Dijkstra() {
+	path.points.clear();
+
+
+	priorityFrontier.push(mapeado[pix2cell(agents[0]->getPosition())]);
+	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
+	Vector2D current;
+	Vector2D next;
+	std::vector<Connection>neighbours;
+	int ticksIniciales = SDL_GetTicks();
+	while (!priorityFrontier.empty()) {
+		current = priorityFrontier.top().coordenates;
+		if (current == (coinPosition)) {
+			cout << "Broke" << endl;
+			break;
+		}
+		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
+		for (int i = 0; i < neighbours.size(); i++) {
+
+			next = neighbours[i].GetToNode()->GetCoords();
+
+			float newCost = cost_so_far[current] + neighbours[i].GetCost();
+
+
+			//GETCOORDS ES CELDAS
+			if ((cost_so_far[next] == 0) || (newCost<cost_so_far[next])) {
+				neighbours[i].GetToNode()->acumulatedCost = newCost;
+				cost_so_far[next] = newCost;
+				priorityFrontier.push(*neighbours[i].GetToNode());
+				cameFrom[next] = current;
+			}
+		}
+		priorityFrontier.pop();
+
+	}
+	//std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
+
+	current = coinPosition;
+
+	path.points.push_back(cell2pix(current));
+
+	while (current != pix2cell(agents[0]->getPosition())) {
+		current = cameFrom[current];
+		//path.points.push_back(cell2pix(current));
+		path.points.insert(path.points.begin(), cell2pix(current));
+	}
+	//path = std::reverse(path.points.begin()), path.points.end());
+
+
+
+	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
+	foundPath = true;
+	ResetVisited();
+
+}
+
+void SceneMultipleTarget::BreadthFirstSearch() {
+	path.points.clear();
+
+	frontier.push(pix2cell(agents[0]->getPosition()));
+	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
+	Vector2D current;
+	Vector2D next;
+	std::vector<Connection>neighbours;
+
+	foundPath = false;
+
 	while (!frontier.empty()) {
-		current = frontier.top().coordenates;
+		current = frontier.front();
+		if (current == pix2cell(coinPosition)) {
+			break;
+		}
+		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
+		for (int i = 0; i < neighbours.size(); i++) {
+
+			if (Graph::EqualVector(cameFrom[neighbours[i].GetToNode()->GetCoords()], NullVector)) {
+				cout << "push" << endl;
+				frontier.push(neighbours[i].GetToNode()->GetCoords());
+				cameFrom[neighbours[i].GetToNode()->GetCoords()] = current;
+			}
+		}
+		frontier.pop();
+	}
+
+	current = coinPosition;
+
+	path.points.push_back(cell2pix(current));
+
+	int contador = 0;
+
+	while (current != pix2cell(agents[0]->getPosition()) && contador<1000) {
+		current = cameFrom[current];
+		//path.points.push_back(cell2pix(current));
+		path.points.insert(path.points.begin(), cell2pix(current));
+		contador++;
+	}
+	//path = std::reverse(path.points.begin()), path.points.end());
+
+	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
+
+
+	foundPath = true;
+	ResetVisited();
+
+}
+
+void SceneMultipleTarget::GreedyBfs() {
+	path.points.clear();
+	priorityFrontier.push(mapeado[pix2cell(agents[0]->getPosition())]);
+	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
+	Vector2D current;
+	Vector2D next;
+	std::vector<Connection>neighbours;
+	int ticksIniciales = SDL_GetTicks();
+	while (!priorityFrontier.empty()) {
+		current = priorityFrontier.top().coordenates;
 		if (current == coinPosition) {
 			cout << "Broke" << endl;
 			break;
@@ -204,45 +385,44 @@ void SceneGreedyBestFirstSearch::GreedyBestFirstSearch() {
 		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
 
 
-			//cout << neighbours.size() << endl;
-		
+		//cout << neighbours.size() << endl;
+
 		for (int i = 0; i < neighbours.size(); i++) {
 
 			next = neighbours[i].GetToNode()->GetCoords();
 
 			//float newCost = cost_so_far[current] + neighbours[i].GetCost() + ManhattanHeuristic(next, coinPosition);
-			float newCost = ManhattanHeuristic(next, coinPosition);
+			float newCost = EulerHeuristic(next, coinPosition);
+
 			//GETCOORDS ES CELDAS
 
 			//cout << current.x << " - " << current.y << endl;
 
-			if (cameFrom[next]==NullVector) {
+			if (cameFrom[next] == NullVector) {
 
 				neighbours[i].GetToNode()->acumulatedCost = newCost;
 				cost_so_far[next] = newCost;
-				frontier.push(*neighbours[i].GetToNode());
+				priorityFrontier.push(*neighbours[i].GetToNode());
 
-				frontierToDraw.push_back(cell2pix(neighbours[i].GetToNode()->GetCoords()));
 
 				cameFrom[next] = current;
 
 			}
 		}
 
-		frontier.pop();
+
+
+		priorityFrontier.pop();
 
 	}
 
-	for (int i = 0; i < frontierToDraw.size(); i++){
-		draw_circle(TheApp::Instance()->getRenderer(), (int)(frontierToDraw[i].x), (int)(frontierToDraw[i].y), 15, 0, 255, 0, 255);
-	}
 	//std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
 
 	current = coinPosition;
 
 	path.points.push_back(cell2pix(current));
 	int counter = 0;
-	while (current != pix2cell(agents[0]->getPosition())&&counter<100) {
+	while (current != pix2cell(agents[0]->getPosition()) && counter<100) {
 		counter++;
 		current = cameFrom[current];
 		//path.points.push_back(cell2pix(current));
@@ -254,12 +434,11 @@ void SceneGreedyBestFirstSearch::GreedyBestFirstSearch() {
 
 	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
 	foundPath = true;
-
 	ResetVisited();
 
 }
 
-void SceneGreedyBestFirstSearch::draw()
+void SceneMultipleTarget::draw()
 {
 	SDL_SetRenderDrawColor(TheApp::Instance()->getRenderer(), 0, 255, 0, 127);
 
@@ -297,12 +476,12 @@ void SceneGreedyBestFirstSearch::draw()
 	agents[0]->draw();
 }
 
-const char* SceneGreedyBestFirstSearch::getTitle()
+const char* SceneMultipleTarget::getTitle()
 {
-	return "SDL Steering Behaviors :: Scene GreedyBestFirstSearch";
+	return "SDL Steering Behaviors :: Multiple Targets";
 }
 
-void SceneGreedyBestFirstSearch::drawMaze()
+void SceneMultipleTarget::drawMaze()
 {
 	if (draw_grid)
 	{
@@ -325,15 +504,17 @@ void SceneGreedyBestFirstSearch::drawMaze()
 
 }
 
-void SceneGreedyBestFirstSearch::drawCoin()
+void SceneMultipleTarget::drawCoin()
 {
-	Vector2D coin_coords = cell2pix(coinPosition);
-	int offset = CELL_SIZE / 2;
-	SDL_Rect dstrect = { (int)coin_coords.x - offset, (int)coin_coords.y - offset, CELL_SIZE, CELL_SIZE };
-	SDL_RenderCopy(TheApp::Instance()->getRenderer(), coin_texture, NULL, &dstrect);
+	for (int i = 0; i < coins.size(); i++) {
+		Vector2D coin_coords = cell2pix(Vector2D{ coins[i].x,coins[i].y });
+		int offset = CELL_SIZE / 2;
+		SDL_Rect dstrect = { (int)coin_coords.x - offset, (int)coin_coords.y - offset, CELL_SIZE, CELL_SIZE };
+		SDL_RenderCopy(TheApp::Instance()->getRenderer(), coin_texture, NULL, &dstrect);
+	}
 }
 
-void SceneGreedyBestFirstSearch::initMaze()
+void SceneMultipleTarget::initMaze()
 {
 
 	// Initialize a list of Rectagles describing the maze geometry (useful for collision avoidance)
@@ -510,7 +691,7 @@ void SceneGreedyBestFirstSearch::initMaze()
 
 }
 
-void SceneGreedyBestFirstSearch::ResetVisited() {
+void SceneMultipleTarget::ResetVisited() {
 	for (int j = 0; j < num_cell_y; j++)
 	{
 		for (int i = 0; i < num_cell_x; i++)
@@ -520,18 +701,27 @@ void SceneGreedyBestFirstSearch::ResetVisited() {
 		}
 	}
 
+
+
 	for (int i = 0; i < nodos.size(); i++) {
 		nodos[i].acumulatedCost = 0;
 	}
 
 	int frontierSize = frontier.size();
+	int priorityFrontierSize = priorityFrontier.size();
 
 	for (int i = 0; i < frontierSize; i++) {
 		frontier.pop();
 	}
+
+	for (int i = 0; i < priorityFrontierSize; i++) {
+		priorityFrontier.pop();
+	}
+
+
 }
 
-bool SceneGreedyBestFirstSearch::loadTextures(char* filename_bg, char* filename_coin)
+bool SceneMultipleTarget::loadTextures(char* filename_bg, char* filename_coin)
 {
 	SDL_Surface *image = IMG_Load(filename_bg);
 	if (!image) {
@@ -556,18 +746,18 @@ bool SceneGreedyBestFirstSearch::loadTextures(char* filename_bg, char* filename_
 	return true;
 }
 
-Vector2D SceneGreedyBestFirstSearch::cell2pix(Vector2D cell)
+Vector2D SceneMultipleTarget::cell2pix(Vector2D cell)
 {
 	int offset = CELL_SIZE / 2;
 	return Vector2D(cell.x*CELL_SIZE + offset, cell.y*CELL_SIZE + offset);
 }
 
-Vector2D SceneGreedyBestFirstSearch::pix2cell(Vector2D pix)
+Vector2D SceneMultipleTarget::pix2cell(Vector2D pix)
 {
 	return Vector2D((float)((int)pix.x / CELL_SIZE), (float)((int)pix.y / CELL_SIZE));
 }
 
-bool SceneGreedyBestFirstSearch::isValidCell(Vector2D cell)
+bool SceneMultipleTarget::isValidCell(Vector2D cell)
 {
 	if ((cell.x < 0) || (cell.y < 0) || (cell.x >= terrain.size()) || (cell.y >= terrain[0].size()))
 		return false;
