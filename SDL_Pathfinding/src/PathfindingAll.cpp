@@ -68,7 +68,7 @@ PathfindingAll::PathfindingAll()
 	currentTarget = Vector2D(0, 0);
 	currentTargetIndex = -1;
 
-	algorithm = algoritmo::DIJKSTRA;
+	algorithm = algoritmo::BFS;
 
 }
 
@@ -340,7 +340,7 @@ void PathfindingAll::BreadthFirstSearch() {
 
 		while (!frontier.empty()) {
 			current = frontier.front();
-			if (current == pix2cell(coinPosition)) {
+			if (current == (coinPosition)) {
 				cout << "Broke" << endl;
 				break;
 			}
