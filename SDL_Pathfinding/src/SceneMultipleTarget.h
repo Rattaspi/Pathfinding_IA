@@ -20,10 +20,9 @@ public:
 
 
 private:
-	enum algoritmo { BFS, DIJKSTRA, GREEDY, ASTAR };
-	algoritmo algorithm;
 	std::vector<Agent*> agents;
 	Vector2D coinPosition;
+	Vector2D closestCoinPosition;
 	Vector2D currentTarget;
 	int currentTargetIndex;
 	Path path;
@@ -56,9 +55,7 @@ private:
 	std::map<Vector2D, Node> mapeado;
 	std::map<Vector2D, float> cost_so_far;
 	void AStar();
-	void BreadthFirstSearch();
-	void GreedyBfs();
-	void Dijkstra();
 	void ResetVisited();
 	float EulerHeuristic(Vector2D current, Vector2D target);
+	void GetClosestCoin();
 };

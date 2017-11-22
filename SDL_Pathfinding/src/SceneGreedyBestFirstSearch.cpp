@@ -219,7 +219,7 @@ void SceneGreedyBestFirstSearch::GreedyBestFirstSearch() {
 			if (cameFrom[next]==NullVector) {
 
 				neighbours[i].GetToNode()->acumulatedCost = newCost;
-				cost_so_far[next] = newCost;
+				//cost_so_far[next] = newCost;
 				frontier.push(*neighbours[i].GetToNode());
 
 				frontierToDraw.push_back(cell2pix(neighbours[i].GetToNode()->GetCoords()));

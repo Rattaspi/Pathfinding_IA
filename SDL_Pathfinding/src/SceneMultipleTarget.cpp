@@ -73,9 +73,6 @@ SceneMultipleTarget::SceneMultipleTarget()
 	// PathFollowing next Target
 	currentTarget = Vector2D(0, 0);
 	currentTargetIndex = -1;
-
-	algorithm = algoritmo::BFS;
-
 }
 
 SceneMultipleTarget::~SceneMultipleTarget()
@@ -141,33 +138,23 @@ void SceneMultipleTarget::update(float dtime, SDL_Event *event)
 					currentTargetIndex = -1;
 					agents[0]->setVelocity(Vector2D(0, 0));
 					// if we have arrived to the coin, replace it ina random cell!
-					if (pix2cell(agents[0]->getPosition()) == coinPosition)
-					{
-						coinPosition = Vector2D(-1, -1);
-						while ((!isValidCell(coinPosition)) || (Vector2D::Distance(coinPosition, pix2cell(agents[0]->getPosition())) < 3)) {
-							coinPosition = Vector2D((float)(rand() % num_cell_x), (float)(rand() % num_cell_y));
-							cout << "coinPos (Coordenadas) " << coinPosition.x << " - " << coinPosition.y << endl;
+
+
+					for (int i = 0; i < coins.size(); i++) {
+						if (pix2cell(agents[0]->getPosition()) == coins[i])
+						{
+							coinPosition = Vector2D(-1, -1);
+							while ((!isValidCell(coinPosition)) || (Vector2D::Distance(coinPosition, pix2cell(agents[0]->getPosition())) < 3)) {
+								coinPosition = Vector2D((float)(rand() % num_cell_x), (float)(rand() % num_cell_y));
+								coins[i] = coinPosition;
+								//cout << "coinPos (Coordenadas) " << coinPosition.x << " - " << coinPosition.y << endl;
+							}
 						}
 					}
-					switch (algorithm) {
-					case algoritmo::BFS:
-						BreadthFirstSearch();
-						cout << "Breadth" << endl;
 
-						break;
 
-					case algoritmo::DIJKSTRA:
-						Dijkstra();
-						break;
-
-					case algoritmo::GREEDY:
-						GreedyBfs();
-						break;
-
-					case algoritmo::ASTAR:
 						AStar();
-						break;
-					}
+					
 
 				}
 				else
@@ -208,6 +195,7 @@ void SceneMultipleTarget::update(float dtime, SDL_Event *event)
 }
 
 void SceneMultipleTarget::AStar() {
+	GetClosestCoin();
 	path.points.clear();
 
 	priorityFrontier.push(mapeado[pix2cell(agents[0]->getPosition())]);
@@ -218,7 +206,7 @@ void SceneMultipleTarget::AStar() {
 	int ticksIniciales = SDL_GetTicks();
 	while (!priorityFrontier.empty()) {
 		current = priorityFrontier.top().coordenates;
-		if (current == (coinPosition)) {
+		if (current == (closestCoinPosition)) {
 			cout << "Broke" << endl;
 			break;
 		}
@@ -227,7 +215,7 @@ void SceneMultipleTarget::AStar() {
 
 			next = neighbours[i].GetToNode()->GetCoords();
 
-			float newCost = cost_so_far[current] + neighbours[i].GetCost() + EulerHeuristic(next, coinPosition);
+			float newCost = cost_so_far[current] + neighbours[i].GetCost() + EulerHeuristic(next, closestCoinPosition);
 
 
 			//GETCOORDS ES CELDAS
@@ -243,7 +231,7 @@ void SceneMultipleTarget::AStar() {
 	}
 	//std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
 
-	current = coinPosition;
+	current = closestCoinPosition;
 
 	path.points.push_back(cell2pix(current));
 
@@ -262,181 +250,6 @@ void SceneMultipleTarget::AStar() {
 
 }
 
-void SceneMultipleTarget::Dijkstra() {
-	path.points.clear();
-
-
-	priorityFrontier.push(mapeado[pix2cell(agents[0]->getPosition())]);
-	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
-	Vector2D current;
-	Vector2D next;
-	std::vector<Connection>neighbours;
-	int ticksIniciales = SDL_GetTicks();
-	while (!priorityFrontier.empty()) {
-		current = priorityFrontier.top().coordenates;
-		if (current == (coinPosition)) {
-			cout << "Broke" << endl;
-			break;
-		}
-		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
-		for (int i = 0; i < neighbours.size(); i++) {
-
-			next = neighbours[i].GetToNode()->GetCoords();
-
-			float newCost = cost_so_far[current] + neighbours[i].GetCost();
-
-
-			//GETCOORDS ES CELDAS
-			if ((cost_so_far[next] == 0) || (newCost<cost_so_far[next])) {
-				neighbours[i].GetToNode()->acumulatedCost = newCost;
-				cost_so_far[next] = newCost;
-				priorityFrontier.push(*neighbours[i].GetToNode());
-				cameFrom[next] = current;
-			}
-		}
-		priorityFrontier.pop();
-
-	}
-	//std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
-
-	current = coinPosition;
-
-	path.points.push_back(cell2pix(current));
-
-	while (current != pix2cell(agents[0]->getPosition())) {
-		current = cameFrom[current];
-		//path.points.push_back(cell2pix(current));
-		path.points.insert(path.points.begin(), cell2pix(current));
-	}
-	//path = std::reverse(path.points.begin()), path.points.end());
-
-
-
-	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
-	foundPath = true;
-	ResetVisited();
-
-}
-
-void SceneMultipleTarget::BreadthFirstSearch() {
-	path.points.clear();
-
-	frontier.push(pix2cell(agents[0]->getPosition()));
-	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
-	Vector2D current;
-	Vector2D next;
-	std::vector<Connection>neighbours;
-
-	foundPath = false;
-
-	while (!frontier.empty()) {
-		current = frontier.front();
-		if (current == pix2cell(coinPosition)) {
-			break;
-		}
-		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
-		for (int i = 0; i < neighbours.size(); i++) {
-
-			if (Graph::EqualVector(cameFrom[neighbours[i].GetToNode()->GetCoords()], NullVector)) {
-				cout << "push" << endl;
-				frontier.push(neighbours[i].GetToNode()->GetCoords());
-				cameFrom[neighbours[i].GetToNode()->GetCoords()] = current;
-			}
-		}
-		frontier.pop();
-	}
-
-	current = coinPosition;
-
-	path.points.push_back(cell2pix(current));
-
-	int contador = 0;
-
-	while (current != pix2cell(agents[0]->getPosition()) && contador<1000) {
-		current = cameFrom[current];
-		//path.points.push_back(cell2pix(current));
-		path.points.insert(path.points.begin(), cell2pix(current));
-		contador++;
-	}
-	//path = std::reverse(path.points.begin()), path.points.end());
-
-	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
-
-
-	foundPath = true;
-	ResetVisited();
-
-}
-
-void SceneMultipleTarget::GreedyBfs() {
-	path.points.clear();
-	priorityFrontier.push(mapeado[pix2cell(agents[0]->getPosition())]);
-	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
-	Vector2D current;
-	Vector2D next;
-	std::vector<Connection>neighbours;
-	int ticksIniciales = SDL_GetTicks();
-	while (!priorityFrontier.empty()) {
-		current = priorityFrontier.top().coordenates;
-		if (current == coinPosition) {
-			cout << "Broke" << endl;
-			break;
-		}
-		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
-
-
-		//cout << neighbours.size() << endl;
-
-		for (int i = 0; i < neighbours.size(); i++) {
-
-			next = neighbours[i].GetToNode()->GetCoords();
-
-			//float newCost = cost_so_far[current] + neighbours[i].GetCost() + ManhattanHeuristic(next, coinPosition);
-			float newCost = EulerHeuristic(next, coinPosition);
-
-			//GETCOORDS ES CELDAS
-
-			//cout << current.x << " - " << current.y << endl;
-
-			if (cameFrom[next] == NullVector) {
-
-				neighbours[i].GetToNode()->acumulatedCost = newCost;
-				cost_so_far[next] = newCost;
-				priorityFrontier.push(*neighbours[i].GetToNode());
-
-
-				cameFrom[next] = current;
-
-			}
-		}
-
-
-
-		priorityFrontier.pop();
-
-	}
-
-	//std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
-
-	current = coinPosition;
-
-	path.points.push_back(cell2pix(current));
-	int counter = 0;
-	while (current != pix2cell(agents[0]->getPosition()) && counter<100) {
-		counter++;
-		current = cameFrom[current];
-		//path.points.push_back(cell2pix(current));
-		path.points.insert(path.points.begin(), cell2pix(current));
-	}
-	//path = std::reverse(path.points.begin()), path.points.end());
-
-
-
-	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
-	foundPath = true;
-	ResetVisited();
-
-}
 
 void SceneMultipleTarget::draw()
 {
@@ -762,4 +575,15 @@ bool SceneMultipleTarget::isValidCell(Vector2D cell)
 	if ((cell.x < 0) || (cell.y < 0) || (cell.x >= terrain.size()) || (cell.y >= terrain[0].size()))
 		return false;
 	return !(terrain[(unsigned int)cell.x][(unsigned int)cell.y] == 0);
+}
+
+void SceneMultipleTarget::GetClosestCoin() {
+	float shortestDistance = SceneMultipleTarget::EulerHeuristic(pix2cell(agents[0]->getPosition()), coins[0]);
+	closestCoinPosition = coins[0];
+	for (int i = 1; i < coins.size(); i++) {
+		if (shortestDistance > SceneMultipleTarget::EulerHeuristic(pix2cell(agents[0]->getPosition()), coins[i])) {
+			shortestDistance = SceneMultipleTarget::EulerHeuristic(pix2cell(agents[0]->getPosition()), coins[i]);
+			closestCoinPosition = coins[i];
+		}
+	}
 }
