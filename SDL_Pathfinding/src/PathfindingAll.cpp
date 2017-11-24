@@ -24,13 +24,35 @@ static inline bool operator < (const Node& lhs, const Node& rhs) {
 }
 
 float PathfindingAll::EulerHeuristic(Vector2D current, Vector2D target) {
+
 	Vector2D currentPixel = cell2pix(current);
 	Vector2D targetPixel = cell2pix(target);
 
+
 	float distanceX = targetPixel.x - currentPixel.x;
 	float distanceY = targetPixel.y - currentPixel.y;
+	float modulusA, modulusB;
+
+	modulusA = sqrtf(distanceX*distanceX + distanceY*distanceY);
 	//cout << distance.x << " - " << distance.y << endl;
-	return sqrtf(distanceX*distanceX + distanceY*distanceY);
+
+	if (currentPixel.x >= (num_cell_x*CELL_SIZE) / 2) {
+		//Mitad derecha
+		distanceX = targetPixel.x + num_cell_x*CELL_SIZE - currentPixel.x;
+
+	}
+	else {
+		//Mitad izquierda
+		distanceX = targetPixel.x - num_cell_x*CELL_SIZE - currentPixel.x;
+
+	}
+	modulusB = sqrtf(distanceX*distanceX + distanceY*distanceY);
+
+
+	if (modulusA > modulusB)
+		return modulusB;
+	else
+		return modulusA;
 }
 
 PathfindingAll::PathfindingAll()
@@ -68,7 +90,7 @@ PathfindingAll::PathfindingAll()
 	currentTarget = Vector2D(0, 0);
 	currentTargetIndex = -1;
 
-	algorithm = algoritmo::BFS;
+	algorithm = algoritmo::ASTAR;
 
 }
 
@@ -87,32 +109,57 @@ PathfindingAll::~PathfindingAll()
 
 void PathfindingAll::update(float dtime, SDL_Event *event)
 {
-
+	bool changedAlgorithm = false;
 	/* Keyboard & Mouse events */
 	switch (event->type) {
 	case SDL_KEYDOWN:
 		if (event->key.keysym.scancode == SDL_SCANCODE_SPACE)
 			draw_grid = !draw_grid;
+		if (event->key.keysym.scancode == SDL_SCANCODE_A) {
+			algorithm = BFS;
+			changedAlgorithm = true;
+		}
+		if (event->key.keysym.scancode == SDL_SCANCODE_W) {
+			algorithm =	DIJKSTRA;
+			changedAlgorithm = true;
+		}
+		if (event->key.keysym.scancode == SDL_SCANCODE_E) {
+			algorithm = GREEDY;
+			changedAlgorithm = true;
+		}
+		if (event->key.keysym.scancode == SDL_SCANCODE_R) {
+			algorithm = ASTAR;
+			changedAlgorithm = true;
+		}
+		
+		//if (changedAlgorithm) {
+		//	path.points.clear();
+		//	ResetVisited(); 
+		//		currentTargetIndex = -1;
+		//}
+
 		break;
+
 	case SDL_MOUSEMOTION:
 	case SDL_MOUSEBUTTONDOWN:
 		if (event->button.button == SDL_BUTTON_LEFT)
 		{
-			Vector2D cell = pix2cell(Vector2D((float)(event->button.x), (float)(event->button.y)));
-			if (isValidCell(cell))
-			{
-				if (path.points.size() > 0)
-					if (path.points[path.points.size() - 1] == cell2pix(cell))
-						break;
+			if (!foundPath) {
+				Vector2D cell = pix2cell(Vector2D((float)(event->button.x), (float)(event->button.y)));
+				if (isValidCell(cell))
+				{
+					if (path.points.size() > 0)
+						if (path.points[path.points.size() - 1] == cell2pix(cell))
+							break;
 
-				//path.points.push_back(cell2pix(cell));
+					//path.points.push_back(cell2pix(cell));
+
+				}
+
+
+				AStar();
 
 			}
-
-
-			AStar();
-
-
 		}
 
 		break;
@@ -152,14 +199,20 @@ void PathfindingAll::update(float dtime, SDL_Event *event)
 
 					case algoritmo::DIJKSTRA:
 						Dijkstra();
+						cout << "Dijkstra" << endl;
 						break;
 
 					case algoritmo::GREEDY:
 						GreedyBfs();
+						cout << "Greedy" << endl;
+
 						break;
 
 					case algoritmo::ASTAR:
+
 						AStar();
+
+						cout << "A Star" << endl;
 						break;
 					}
 
@@ -202,8 +255,7 @@ void PathfindingAll::update(float dtime, SDL_Event *event)
 }
 
 void PathfindingAll::AStar() {
-	path.points.clear();
-
+	ResetVisited();
 	priorityFrontier.push(mapeado[pix2cell(agents[0]->getPosition())]);
 	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
 	Vector2D current;
@@ -217,12 +269,12 @@ void PathfindingAll::AStar() {
 			break;
 		}
 		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
+		priorityFrontier.pop();
 		for (int i = 0; i < neighbours.size(); i++) {
 
 			next = neighbours[i].GetToNode()->GetCoords();
 
 			float newCost = cost_so_far[current] + neighbours[i].GetCost() + EulerHeuristic(next, coinPosition);
-
 
 			//GETCOORDS ES CELDAS
 			if ((cost_so_far[next] == 0) || (newCost<cost_so_far[next])) {
@@ -232,34 +284,30 @@ void PathfindingAll::AStar() {
 				cameFrom[next] = current;
 			}
 		}
-		priorityFrontier.pop();
+		//frontier.pop();
 
 	}
 	//std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
 
+	//REVERSE PATH
 	current = coinPosition;
-
 	path.points.push_back(cell2pix(current));
 
 	while (current != pix2cell(agents[0]->getPosition())) {
 		current = cameFrom[current];
-		//path.points.push_back(cell2pix(current));
+		cout << current.x << " " << current.y << endl;
 		path.points.insert(path.points.begin(), cell2pix(current));
 	}
-	//path = std::reverse(path.points.begin()), path.points.end());
-
-
-
-	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
 	foundPath = true;
-	ResetVisited();
+	//ResetVisited();
 
 }
 
 void PathfindingAll::Dijkstra() {
 	currentVisitedNodes = 0;
-	path.points.clear();
+	//path.points.clear();
 
+	ResetVisited();
 
 	priorityFrontier.push(mapeado[pix2cell(agents[0]->getPosition())]);
 	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
@@ -327,8 +375,10 @@ void PathfindingAll::Dijkstra() {
 }
 
 void PathfindingAll::BreadthFirstSearch() {
+	ResetVisited();
+
 	currentVisitedNodes = 0;
-	path.points.clear();
+	//path.points.clear();
 
 		frontier.push(pix2cell(agents[0]->getPosition()));
 		cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
@@ -394,73 +444,45 @@ void PathfindingAll::BreadthFirstSearch() {
 }
 
 void PathfindingAll::GreedyBfs() {
-	path.points.clear();
+
+	ResetVisited();
 	priorityFrontier.push(mapeado[pix2cell(agents[0]->getPosition())]);
-	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
-	Vector2D current;
-	Vector2D next;
-	std::vector<Connection>neighbours;
-	int ticksIniciales = SDL_GetTicks();
+	Vector2D current, next;
+	//cout << pix2cell(agents[0]->getPosition()).x << " " << pix2cell(agents[0]->getPosition()).y << endl;
+
 	while (!priorityFrontier.empty()) {
 		current = priorityFrontier.top().coordenates;
 		if (current == coinPosition) {
-			cout << "Broke" << endl;
 			break;
 		}
-		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
 
-
-		//cout << neighbours.size() << endl;
-
-		for (int i = 0; i < neighbours.size(); i++) {
-
-			next = neighbours[i].GetToNode()->GetCoords();
-
-			//float newCost = cost_so_far[current] + neighbours[i].GetCost() + ManhattanHeuristic(next, coinPosition);
-			float newCost = EulerHeuristic(next, coinPosition);
-
-			//GETCOORDS ES CELDAS
-
-			//cout << current.x << " - " << current.y << endl;
-
+		//calcular neighbors
+		vector<Connection> neighbors;
+		neighbors = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
+		priorityFrontier.pop();
+		for (int i = 0; i < neighbors.size(); i++) {
+			next = neighbors[i].GetToNode()->GetCoords();
 			if (cameFrom[next] == NullVector) {
+				neighbors[i].GetToNode()->acumulatedCost = EulerHeuristic(next, coinPosition);
 
-				neighbours[i].GetToNode()->acumulatedCost = newCost;
-				cost_so_far[next] = newCost;
-				priorityFrontier.push(*neighbours[i].GetToNode());
-
-
+				priorityFrontier.push(*neighbors[i].GetToNode());
 				cameFrom[next] = current;
-
 			}
 		}
 
 
-
-		priorityFrontier.pop();
-
 	}
-
-	//std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
-
+	//=================================================================
+	//REVERSE PATH
 	current = coinPosition;
-
 	path.points.push_back(cell2pix(current));
-	int counter = 0;
-	while (current != pix2cell(agents[0]->getPosition()) && counter<100) {
-		counter++;
+
+	while (current != pix2cell(agents[0]->getPosition())) {
 		current = cameFrom[current];
-		//path.points.push_back(cell2pix(current));
+		cout << current.x << " " << current.y << endl;
 		path.points.insert(path.points.begin(), cell2pix(current));
 	}
-	//path = std::reverse(path.points.begin()), path.points.end());
-
-
-
-	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
 	foundPath = true;
-	ResetVisited();
-
 }
 
 void PathfindingAll::draw()
@@ -503,6 +525,7 @@ void PathfindingAll::draw()
 
 const char* PathfindingAll::getTitle()
 {
+	cout << "Se llama al titulo";
 	return "SDL Steering Behaviors :: SceneAStar";
 }
 
@@ -525,7 +548,15 @@ void PathfindingAll::drawMaze()
 			draw_circle(TheApp::Instance()->getRenderer(), cell2pix(nodos[j].GetCoords()).x, cell2pix(nodos[j].GetCoords()).y, 15, 0, 0, 255, 255);
 
 	}
+	//auto start = std::chrono::system_clock::now();
 
+	////Pathfinding
+	//auto end = std::chrono::system_clock::now();
+	//auto elapsed = end - start;
+	//Text hola(std::to_string(elapsed.count()).substr(0, 6), Vector2D(50, 50), 50);
+	//hola.DrawText();
+
+	cout << "A Star" << endl;
 
 }
 

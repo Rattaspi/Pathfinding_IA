@@ -56,6 +56,6 @@ private:
 	std::map<Vector2D, float> cost_so_far;
 	void AStar();
 	void ResetVisited();
-	float EulerHeuristic(Vector2D current, Vector2D target);
+	float ManhattanHeuristic(Vector2D current, Vector2D target);
 	void GetClosestCoin();
 };

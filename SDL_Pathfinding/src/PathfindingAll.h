@@ -7,6 +7,8 @@
 #include "Graph.h"
 #include <queue>
 #include <map>
+#include "Text.h"
+#include <chrono>
 
 class PathfindingAll :
 	public Scene
@@ -20,6 +22,7 @@ public:
 
 
 private:
+	std::string bruh;
 	int maxVisitedNodes = 0;
 	int minVisitedNodes = 10000;
 	int currentVisitedNodes = 0;

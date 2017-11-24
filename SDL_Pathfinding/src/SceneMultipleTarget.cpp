@@ -23,14 +23,37 @@ static inline bool operator < (const Node& lhs, const Node& rhs) {
 	return lhs.acumulatedCost>rhs.acumulatedCost;
 }
 
-float SceneMultipleTarget::EulerHeuristic(Vector2D current, Vector2D target) {
+float SceneMultipleTarget::ManhattanHeuristic(Vector2D current, Vector2D target) {
+
+
 	Vector2D currentPixel = cell2pix(current);
 	Vector2D targetPixel = cell2pix(target);
 
+
 	float distanceX = targetPixel.x - currentPixel.x;
 	float distanceY = targetPixel.y - currentPixel.y;
+	float modulusA, modulusB;
+
+	modulusA = sqrtf(distanceX*distanceX + distanceY*distanceY);
 	//cout << distance.x << " - " << distance.y << endl;
-	return sqrtf(distanceX*distanceX + distanceY*distanceY);
+
+	if (currentPixel.x >= (num_cell_x*CELL_SIZE) / 2) {
+		//Mitad derecha
+		distanceX = targetPixel.x + num_cell_x*CELL_SIZE - currentPixel.x;
+
+	}
+	else {
+		//Mitad izquierda
+		distanceX = targetPixel.x - num_cell_x*CELL_SIZE - currentPixel.x;
+
+	}
+	modulusB = sqrtf(distanceX*distanceX + distanceY*distanceY);
+
+
+	if (modulusA > modulusB)
+		return modulusB;
+	else
+		return modulusA;
 }
 
 SceneMultipleTarget::SceneMultipleTarget()
@@ -195,6 +218,7 @@ void SceneMultipleTarget::update(float dtime, SDL_Event *event)
 }
 
 void SceneMultipleTarget::AStar() {
+	ResetVisited();
 	GetClosestCoin();
 	path.points.clear();
 
@@ -215,7 +239,7 @@ void SceneMultipleTarget::AStar() {
 
 			next = neighbours[i].GetToNode()->GetCoords();
 
-			float newCost = cost_so_far[current] + neighbours[i].GetCost() + EulerHeuristic(next, closestCoinPosition);
+			float newCost = cost_so_far[current] + neighbours[i].GetCost() + ManhattanHeuristic(next, closestCoinPosition);
 
 
 			//GETCOORDS ES CELDAS
@@ -229,24 +253,16 @@ void SceneMultipleTarget::AStar() {
 		priorityFrontier.pop();
 
 	}
-	//std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
-
+	//REVERSE PATH
 	current = closestCoinPosition;
-
 	path.points.push_back(cell2pix(current));
 
 	while (current != pix2cell(agents[0]->getPosition())) {
 		current = cameFrom[current];
-		//path.points.push_back(cell2pix(current));
+		cout << current.x << " " << current.y << endl;
 		path.points.insert(path.points.begin(), cell2pix(current));
 	}
-	//path = std::reverse(path.points.begin()), path.points.end());
-
-
-
-	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
 	foundPath = true;
-	ResetVisited();
 
 }
 
@@ -578,11 +594,11 @@ bool SceneMultipleTarget::isValidCell(Vector2D cell)
 }
 
 void SceneMultipleTarget::GetClosestCoin() {
-	float shortestDistance = SceneMultipleTarget::EulerHeuristic(pix2cell(agents[0]->getPosition()), coins[0]);
+	float shortestDistance = SceneMultipleTarget::ManhattanHeuristic(pix2cell(agents[0]->getPosition()), coins[0]);
 	closestCoinPosition = coins[0];
 	for (int i = 1; i < coins.size(); i++) {
-		if (shortestDistance > SceneMultipleTarget::EulerHeuristic(pix2cell(agents[0]->getPosition()), coins[i])) {
-			shortestDistance = SceneMultipleTarget::EulerHeuristic(pix2cell(agents[0]->getPosition()), coins[i]);
+		if (shortestDistance > SceneMultipleTarget::ManhattanHeuristic(pix2cell(agents[0]->getPosition()), coins[i])) {
+			shortestDistance = SceneMultipleTarget::ManhattanHeuristic(pix2cell(agents[0]->getPosition()), coins[i]);
 			closestCoinPosition = coins[i];
 		}
 	}

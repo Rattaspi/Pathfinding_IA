@@ -1,4 +1,4 @@
-#define NullVector Vector2D{-1-1}
+#define NullVector Vector2D{-1,-1}
 #include "SceneGreedyBestFirstSearch.h"
 
 using namespace std;
@@ -20,27 +20,43 @@ static inline bool operator < (const Vector2D& lhs, const Vector2D& rhs) {
 }
 
 static inline bool operator < (const Node& lhs, const Node& rhs) {
-	return lhs.acumulatedCost<rhs.acumulatedCost;
+	return lhs.acumulatedCost>rhs.acumulatedCost;
 }
 
 float SceneGreedyBestFirstSearch::ManhattanHeuristic(Vector2D current, Vector2D target) {
+
+
 	Vector2D currentPixel = cell2pix(current);
 	Vector2D targetPixel = cell2pix(target);
 
+
 	float distanceX = targetPixel.x - currentPixel.x;
 	float distanceY = targetPixel.y - currentPixel.y;
-	//cout << " X " << distanceX << " - " << distanceY <<  " Y " << endl;
-	
-	float result = sqrtf(distanceX*distanceX + distanceY*distanceY);
+	float modulusA, modulusB;
 
-	cout << result<< endl;
+	modulusA = sqrtf(distanceX*distanceX + distanceY*distanceY);
+	//cout << distance.x << " - " << distance.y << endl;
+
+	if (currentPixel.x >= (num_cell_x*CELL_SIZE) / 2) {
+		//Mitad derecha
+		distanceX = targetPixel.x + num_cell_x*CELL_SIZE - currentPixel.x;
+
+	}
+	else {
+		//Mitad izquierda
+		distanceX = targetPixel.x - num_cell_x*CELL_SIZE - currentPixel.x;
+
+	}
+	modulusB = sqrtf(distanceX*distanceX + distanceY*distanceY);
 
 
-	return result;
+	if (modulusA > modulusB)
+		return modulusB;
+	else
+		return modulusA;
 }
 
-SceneGreedyBestFirstSearch::SceneGreedyBestFirstSearch()
-{
+SceneGreedyBestFirstSearch::SceneGreedyBestFirstSearch(){
 	waitAFrame = false;
 	foundPath = false;
 	draw_grid = false;
@@ -186,77 +202,44 @@ void SceneGreedyBestFirstSearch::update(float dtime, SDL_Event *event)
 }
 
 void SceneGreedyBestFirstSearch::GreedyBestFirstSearch() {
-
+	ResetVisited();
 	frontier.push(mapeado[pix2cell(agents[0]->getPosition())]);
-	mapeado[pix2cell(agents[0]->getPosition())].acumulatedCost = 0;
-	cameFrom[pix2cell(agents[0]->getPosition())] = NullVector;
-	
-	Vector2D current;
-	Vector2D next;
-	std::vector<Connection>neighbours;
-	int ticksIniciales = SDL_GetTicks();
+	Vector2D current, next;
+	//cout << pix2cell(agents[0]->getPosition()).x << " " << pix2cell(agents[0]->getPosition()).y << endl;
+
 	while (!frontier.empty()) {
 		current = frontier.top().coordenates;
 		if (current == coinPosition) {
-			cout << "Broke" << endl;
 			break;
 		}
-		neighbours = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
-
-
-			//cout << neighbours.size() << endl;
 		
-		for (int i = 0; i < neighbours.size(); i++) {
-
-			next = neighbours[i].GetToNode()->GetCoords();
-
-			//float newCost = cost_so_far[current] + neighbours[i].GetCost() + ManhattanHeuristic(next, coinPosition);
-			float newCost = ManhattanHeuristic(next, coinPosition);
-			//GETCOORDS ES CELDAS
-
-			//cout << current.x << " - " << current.y << endl;
-
-			if (cameFrom[next]==NullVector) {
-
-				neighbours[i].GetToNode()->acumulatedCost = newCost;
-				//cost_so_far[next] = newCost;
-				frontier.push(*neighbours[i].GetToNode());
-
-				frontierToDraw.push_back(cell2pix(neighbours[i].GetToNode()->GetCoords()));
-
+		//calcular neighbors
+		vector<Connection> neighbors;
+		neighbors = graph.GetConnections(&nodos[current.x + current.y*num_cell_x]);
+		frontier.pop();
+		for (int i = 0; i < neighbors.size(); i++) {
+			next = neighbors[i].GetToNode()->GetCoords();
+			if (cameFrom[next] == NullVector) {
+				neighbors[i].GetToNode()->acumulatedCost = ManhattanHeuristic(next,coinPosition);
+				
+				frontier.push(*neighbors[i].GetToNode());
 				cameFrom[next] = current;
-
 			}
 		}
-
-		frontier.pop();
-
+		
+		
 	}
-
-	for (int i = 0; i < frontierToDraw.size(); i++){
-		draw_circle(TheApp::Instance()->getRenderer(), (int)(frontierToDraw[i].x), (int)(frontierToDraw[i].y), 15, 0, 255, 0, 255);
-	}
-	//std::cout << "Calcular el path tarda" << SDL_GetTicks() - ticksIniciales << std::endl;
-
+	//=================================================================
+	//REVERSE PATH
 	current = coinPosition;
-
 	path.points.push_back(cell2pix(current));
-	int counter = 0;
-	while (current != pix2cell(agents[0]->getPosition())&&counter<100) {
-		counter++;
+
+	while (current != pix2cell(agents[0]->getPosition())) {
 		current = cameFrom[current];
-		//path.points.push_back(cell2pix(current));
+		cout << current.x << " " << current.y << endl;
 		path.points.insert(path.points.begin(), cell2pix(current));
 	}
-	//path = std::reverse(path.points.begin()), path.points.end());
-
-
-
-	path.points.insert(path.points.begin(), (agents[0]->getPosition()));
-	foundPath = true;
-
-	ResetVisited();
-
+	foundPath = true;	
 }
 
 void SceneGreedyBestFirstSearch::draw()
@@ -299,7 +282,7 @@ void SceneGreedyBestFirstSearch::draw()
 
 const char* SceneGreedyBestFirstSearch::getTitle()
 {
-	return "SDL Steering Behaviors :: Scene GreedyBestFirstSearch";
+	return "SDL Steering Behaviors :: GreedyJDER";
 }
 
 void SceneGreedyBestFirstSearch::drawMaze()

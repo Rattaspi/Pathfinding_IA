@@ -145,6 +145,7 @@
     <ClCompile Include="..\src\ScenePathFinding.cpp" />
     <ClCompile Include="..\src\SDL_SimpleApp.cpp" />
     <ClCompile Include="..\src\SteeringBehavior.cpp" />
+    <ClCompile Include="..\src\Text.cpp" />
     <ClCompile Include="..\src\utils.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -161,6 +162,7 @@
     <ClInclude Include="..\src\SceneMultipleTarget.h" />
     <ClInclude Include="..\src\ScenePathFinding.h" />
     <ClInclude Include="..\src\SteeringBehavior.h" />
+    <ClInclude Include="..\src\Text.h" />
     <ClInclude Include="..\src\utils.h" />
     <ClInclude Include="..\src\Scene.h" />
     <ClInclude Include="..\src\SDL_SimpleApp.h" />
