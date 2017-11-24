@@ -1,6 +1,6 @@
 #pragma once
 #include "Vector2D.h"
-
+#define CELL_SIZE 32
 class Node
 {
 private:
@@ -14,6 +14,7 @@ public:
 	void SetCoords(Vector2D coords);
 	float GetCost();
 	bool IsObstacle();
-	const static int groundNodeWeight = 400;
-	const static int waterNodeWeight = 50000;
+	const static int groundNodeWeight = CELL_SIZE;
+	const static int forestNodeWeight = CELL_SIZE * 40;
+	const static int waterNodeWeight = CELL_SIZE * 100;
 };

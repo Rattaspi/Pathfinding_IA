@@ -14,8 +14,8 @@ void Text::DrawText() {
 	//Message_rect.x = position.x;  //controls the rect's x coordinate 
 	//Message_rect.y = position.y; // controls the rect's y coordinte
 	//Amb anchor
-	Message_rect.x = position.x - surface->w / 2;
-	Message_rect.y = position.y - surface->h / 2;
+	Message_rect.x = position.x;// - surface->w / 2;
+	Message_rect.y = position.y;// - surface->h / 2;
 
 	Message_rect.w = surface->w; // controls the width of the rect
 	Message_rect.h = surface->h; // controls the height of the rect
@@ -31,3 +31,6 @@ void Text::DrawText() {
 	SDL_FreeSurface(surface);
 }
 
+void Text::SetText(std::string a) {
+	text = a;
+}

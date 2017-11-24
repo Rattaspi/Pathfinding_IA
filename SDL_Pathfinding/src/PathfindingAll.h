@@ -67,5 +67,5 @@ private:
 	void GreedyBfs();
 	void Dijkstra();
 	void ResetVisited();
-	float EulerHeuristic(Vector2D current, Vector2D target);
+	float EuclideanHeuristic(Vector2D current, Vector2D target);
 };

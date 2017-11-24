@@ -23,7 +23,7 @@ static inline bool operator < (const Node& lhs, const Node& rhs) {
 	return lhs.acumulatedCost>rhs.acumulatedCost;
 }
 
-float PathfindingAll::EulerHeuristic(Vector2D current, Vector2D target) {
+float PathfindingAll::EuclideanHeuristic(Vector2D current, Vector2D target) {
 
 	Vector2D currentPixel = cell2pix(current);
 	Vector2D targetPixel = cell2pix(target);
@@ -119,15 +119,15 @@ void PathfindingAll::update(float dtime, SDL_Event *event)
 			algorithm = BFS;
 			changedAlgorithm = true;
 		}
-		if (event->key.keysym.scancode == SDL_SCANCODE_W) {
+		if (event->key.keysym.scancode == SDL_SCANCODE_S) {
 			algorithm =	DIJKSTRA;
 			changedAlgorithm = true;
 		}
-		if (event->key.keysym.scancode == SDL_SCANCODE_E) {
+		if (event->key.keysym.scancode == SDL_SCANCODE_D) {
 			algorithm = GREEDY;
 			changedAlgorithm = true;
 		}
-		if (event->key.keysym.scancode == SDL_SCANCODE_R) {
+		if (event->key.keysym.scancode == SDL_SCANCODE_G) {
 			algorithm = ASTAR;
 			changedAlgorithm = true;
 		}
@@ -274,7 +274,7 @@ void PathfindingAll::AStar() {
 
 			next = neighbours[i].GetToNode()->GetCoords();
 
-			float newCost = cost_so_far[current] + neighbours[i].GetCost() + EulerHeuristic(next, coinPosition);
+			float newCost = cost_so_far[current] + neighbours[i].GetCost() + EuclideanHeuristic(next, coinPosition);
 
 			//GETCOORDS ES CELDAS
 			if ((cost_so_far[next] == 0) || (newCost<cost_so_far[next])) {
@@ -463,7 +463,7 @@ void PathfindingAll::GreedyBfs() {
 		for (int i = 0; i < neighbors.size(); i++) {
 			next = neighbors[i].GetToNode()->GetCoords();
 			if (cameFrom[next] == NullVector) {
-				neighbors[i].GetToNode()->acumulatedCost = EulerHeuristic(next, coinPosition);
+				neighbors[i].GetToNode()->acumulatedCost = EuclideanHeuristic(next, coinPosition);
 
 				priorityFrontier.push(*neighbors[i].GetToNode());
 				cameFrom[next] = current;
@@ -544,8 +544,10 @@ void PathfindingAll::drawMaze()
 	}
 
 	for (int j = 0; j < nodos.size(); j++) {
-		if (nodos[j].cost>500)
+		if (nodos[j].cost==Node::waterNodeWeight)
 			draw_circle(TheApp::Instance()->getRenderer(), cell2pix(nodos[j].GetCoords()).x, cell2pix(nodos[j].GetCoords()).y, 15, 0, 0, 255, 255);
+		else if (nodos[j].cost == Node::forestNodeWeight)
+			draw_circle(TheApp::Instance()->getRenderer(), cell2pix(nodos[j].GetCoords()).x, cell2pix(nodos[j].GetCoords()).y, 15, 0, 255, 0, 255);
 
 	}
 	//auto start = std::chrono::system_clock::now();
@@ -554,9 +556,33 @@ void PathfindingAll::drawMaze()
 	//auto end = std::chrono::system_clock::now();
 	//auto elapsed = end - start;
 	//Text hola(std::to_string(elapsed.count()).substr(0, 6), Vector2D(50, 50), 50);
-	//hola.DrawText();
+	Text algorithmText("NoText", Vector2D(20, 20), 30);
 
-	cout << "A Star" << endl;
+
+	switch (algorithm) {
+	case BFS:
+		algorithmText.SetText("Breadth First Search");
+
+		break;
+
+	case DIJKSTRA:
+
+		algorithmText.SetText("Dijstra Algorithm");
+
+		break;
+
+	case GREEDY:
+
+		algorithmText.SetText("Greedy Best First Search");
+
+		break;
+	case ASTAR:
+
+		algorithmText.SetText("A Star");
+
+		break;
+	}
+	algorithmText.DrawText();
 
 }
 
@@ -684,6 +710,10 @@ void PathfindingAll::initMaze()
 					tmp.cost = tmp.waterNodeWeight;
 				}
 			}
+			else if((j==13||j==14)&&(i==10||i==11||i==12||i==17||i==20||i==25||i==26)){
+				tmp.cost = tmp.forestNodeWeight;
+			}
+
 			else
 				tmp.cost = tmp.groundNodeWeight;
 
